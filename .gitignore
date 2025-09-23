@@ -26,3 +26,7 @@ obj/
 pkg/
 release/wi-kubernetes-manifests.yaml
 vendor/
+terraform/.terraform/
+terraform/dtap/dev/.terraform/
+terraform/dtap/dev/terraform.tfstate*
+terraform/dtap/dev/terraform.tfvars

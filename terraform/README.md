@@ -1,97 +1,285 @@
-<!-- Copyright 2022 Google LLC
+# Terraform Infrastructure for Online Boutique
 
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
+This directory contains Terraform configurations for deploying the Google Cloud microservices demo application (Online Boutique) on Google Kubernetes Engine (GKE).
 
-http://www.apache.org/licenses/LICENSE-2.0
+## 📁 Directory Structure
 
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License. -->
+```
+terraform/
+├── README.md                    # This file
+├── dtap/                        # Environment-specific configurations
+│   └── dev/                     # Development environment
+│       ├── data.tf              # Data sources
+│       ├── main.tf              # Main configuration
+│       ├── output.tf            # Output values
+│       ├── provider.tf          # Provider configuration
+│       ├── roles.tf             # IAM roles and permissions
+│       ├── state.tf             # Terraform state configuration
+│       └── variables.tf         # Variable definitions
+└── src/                         # Reusable modules
+    └── modules/
+        ├── enable_google_apis/  # Module to enable required GCP APIs
+        ├── kubernetes_cluster/  # GKE cluster and app deployment
+        └── vpc/                 # VPC network configuration
+```
 
-# Use Terraform to deploy Online Boutique on a GKE cluster
+## 🔧 Prerequisites
 
-This page walks you through the steps required to deploy the [Online Boutique](https://github.com/GoogleCloudPlatform/microservices-demo) sample application on a [Google Kubernetes Engine (GKE)](https://cloud.google.com/kubernetes-engine) cluster using Terraform.
+Before you can deploy this infrastructure, ensure you have the following:
 
-## Prerequisites
+### Required Tools
 
-1. [Create a new project or use an existing project](https://cloud.google.com/resource-manager/docs/creating-managing-projects#console) on Google Cloud, and ensure [billing is enabled](https://cloud.google.com/billing/docs/how-to/verify-billing-enabled) on the project.
-
-## Deploy the sample application
-
-1. Clone the Github repository.
-
-    ```bash
-    git clone https://github.com/GoogleCloudPlatform/microservices-demo.git
-    ```
-
-1. Move into the `terraform/` directory which contains the Terraform installation scripts.
-
-    ```bash
-    cd microservices-demo/terraform
-    ```
-
-1. Open the `terraform.tfvars` file and replace `<project_id_here>` with the [GCP Project ID](https://cloud.google.com/resource-manager/docs/creating-managing-projects?hl=en#identifying_projects) for the `gcp_project_id` variable.
-
-1. (Optional) If you want to provision a [Google Cloud Memorystore (Redis)](https://cloud.google.com/memorystore) instance, you can change the value of `memorystore = false` to `memorystore = true` in this `terraform.tfvars` file.
-
-1. Initialize Terraform.
-
-    ```bash
-    terraform init
-    ```
-
-1. See what resources will be created.
-
-    ```bash
-    terraform plan
-    ```
-
-1. Create the resources and deploy the sample.
-
-    ```bash
-    terraform apply
-    ```
-
-    1. If there is a confirmation prompt, type `yes` and hit Enter/Return.
-
-    Note: This step can take about 10 minutes. Do not interrupt the process.
-
-Once the Terraform script has finished, you can locate the frontend's external IP address to access the sample application.
-
-- Option 1:
-
-    ```bash
-    kubectl get service frontend-external | awk '{print $4}'
-    ```
-
-- Option 2: On Google Cloud Console, navigate to "Kubernetes Engine" and then "Services & Ingress" to locate the Endpoint associated with "frontend-external".
-
-## Clean up
-
-To avoid incurring charges to your Google Cloud account for the resources used in this sample application, either delete the project that contains the resources, or keep the project and delete the individual resources.
-
-To remove the individual resources created for by Terraform without deleting the project:
-
-1. Navigate to the `terraform/` directory.
-
-1. Set `deletion_protection` to `false` for the `google_container_cluster` resource (GKE cluster).
+1. **Terraform** (v1.0 or later)
 
    ```bash
-   # Uncomment the line: "deletion_protection = false"
-   sed -i "s/# deletion_protection/deletion_protection/g" main.tf
+   # Install via Homebrew (macOS)
+   brew tap hashicorp/tap
+   brew install hashicorp/tap/terraform
 
-   # Re-apply the Terraform to update the state
-   terraform apply
+   # Verify installation
+   terraform --version
    ```
 
-1. Run the following command:
+2. **Google Cloud SDK**
 
    ```bash
-   terraform destroy
+   # Install via Homebrew (macOS)
+   brew install google-cloud-sdk
+
+   # Verify installation
+   gcloud --version
    ```
 
-   1. If there is a confirmation prompt, type `yes` and hit Enter/Return.
+3. **kubectl**
+
+   ```bash
+   # Install via Homebrew (macOS)
+   brew install kubectl
+
+   # Verify installation
+   kubectl version --client
+   ```
+
+### GCP Setup
+
+1. **Google Cloud Project**
+
+   - Create or use an existing GCP project
+   - Note your project ID
+
+2. **Authentication**
+
+   ```bash
+   # Login to Google Cloud
+   gcloud auth login
+
+   # Set your project
+   gcloud config set project YOUR_PROJECT_ID
+
+   # Enable application default credentials
+   gcloud auth application-default login
+   ```
+
+3. **Required Permissions**
+   Your account needs the following IAM roles:
+   - `Kubernetes Engine Admin`
+   - `Compute Network Admin`
+   - `Service Account Admin`
+   - `Project IAM Admin`
+
+## 🚀 Getting Started
+
+### Step 1: Clone and Navigate
+
+```bash
+git clone https://github.com/asdutoit/microservices-demo.git
+cd /path/to/microservices-demo/terraform/dtap/dev
+```
+
+### Step 2: Configure Variables
+
+Create a `terraform.tfvars` file or export environment variables:
+
+```bash
+# Option 1: Create terraform.tfvars file
+echo 'gcp_project_id = "your-project-id"' > terraform.tfvars
+
+# Option 2: Export environment variable
+export TF_VAR_gcp_project_id="your-project-id"
+```
+
+### Step 3: Initialize Terraform
+
+```bash
+terraform init
+```
+
+This will:
+
+- Download required providers
+- Initialize the backend
+- Download modules
+
+### Step 4: Plan the Deployment
+
+```bash
+terraform plan
+```
+
+Review the planned changes to ensure everything looks correct.
+
+### Step 5: Deploy the Infrastructure
+
+```bash
+terraform apply
+```
+
+Type `yes` when prompted. This will:
+
+- Enable required GCP APIs
+- Create VPC network and subnet
+- Deploy GKE Autopilot cluster
+- Deploy the Online Boutique application
+- Wait for all pods to be ready
+
+⏱️ **Note**: Initial deployment takes approximately 10-15 minutes.
+
+## 🔌 Connecting to Your Cluster
+
+After deployment, get the kubectl connection command:
+
+### Option 1: Get Connection Instructions
+
+```bash
+terraform output connect_instructions
+```
+
+### Option 2: Get Raw Command
+
+```bash
+terraform output -raw kubectl_context_command
+```
+
+### Option 3: Execute Directly
+
+```bash
+# Execute the connection command
+eval $(terraform output -raw kubectl_context_command)
+
+# Verify connection
+kubectl get nodes
+kubectl get pods
+```
+
+## 📊 Available Outputs
+
+| Output                    | Description                          |
+| ------------------------- | ------------------------------------ |
+| `cluster_name`            | Name of the GKE cluster              |
+| `cluster_location`        | Region where the cluster is deployed |
+| `kubectl_context_command` | Command to set kubectl context       |
+| `kubectl_config_info`     | Structured cluster information       |
+| `connect_instructions`    | Complete connection guide            |
+
+## 🛠️ Configuration Options
+
+### Environment Variables
+
+| Variable         | Description                      | Default           |
+| ---------------- | -------------------------------- | ----------------- |
+| `gcp_project_id` | GCP Project ID                   | _Required_        |
+| `name`           | Cluster and resource name prefix | `online-boutique` |
+| `region`         | GCP region for deployment        | `us-central1`     |
+| `namespace`      | Kubernetes namespace             | `default`         |
+| `memorystore`    | Enable Cloud Memorystore Redis   | `false`           |
+
+### Customizing the Deployment
+
+Edit `variables.tf` to modify:
+
+- Cluster region
+- Resource naming
+- Enable/disable Memorystore
+- Change application namespace
+
+## 🔍 Troubleshooting
+
+### Common Issues
+
+1. **Authentication Errors**
+
+   ```bash
+   # Re-authenticate
+   gcloud auth application-default login
+   ```
+
+2. **API Not Enabled Errors**
+
+   ```bash
+   # Enable APIs manually if needed
+   gcloud services enable container.googleapis.com
+   gcloud services enable compute.googleapis.com
+   ```
+
+3. **Permission Errors**
+
+   - Verify your account has the required IAM roles
+   - Check project permissions
+
+4. **Terraform State Issues**
+   ```bash
+   # Refresh state
+   terraform refresh
+   ```
+
+### Getting Help
+
+```bash
+# View Terraform help
+terraform --help
+
+# View resource documentation
+terraform providers
+
+# Check kubectl context
+kubectl config get-contexts
+```
+
+## 🧹 Cleanup
+
+To destroy all resources:
+
+```bash
+terraform destroy
+```
+
+Type `yes` when prompted. This will remove all created resources and avoid ongoing charges.
+
+⚠️ **Warning**: This will permanently delete your cluster and all data. Make sure to backup any important data first.
+
+## 🏗️ Architecture
+
+This Terraform configuration deploys:
+
+- **VPC Network**: Custom network with private subnets
+- **GKE Autopilot Cluster**: Fully managed Kubernetes cluster
+- **Online Boutique**: 11 microservices demo application
+- **Load Balancer**: External access to the frontend service
+
+The infrastructure follows Google Cloud best practices:
+
+- Private cluster with authorized networks
+- Automatic scaling and management
+- Security policies and network isolation
+- Resource optimization
+
+## 📚 Additional Resources
+
+- [Online Boutique Documentation](../README.md)
+- [GKE Autopilot Documentation](https://cloud.google.com/kubernetes-engine/docs/concepts/autopilot-overview)
+- [Terraform GCP Provider](https://registry.terraform.io/providers/hashicorp/google/latest/docs)
+- [kubectl Cheat Sheet](https://kubernetes.io/docs/reference/kubectl/cheatsheet/)
+
+---
+
+**Happy deploying!** 🎉
