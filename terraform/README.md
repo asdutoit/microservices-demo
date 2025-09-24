@@ -7,6 +7,8 @@ This directory contains Terraform configurations for deploying the Google Cloud 
 ```
 terraform/
 ├── README.md                    # This file
+├── QUICK_REFERENCE.md           # Quick reference guide (to be completed)
+├── README_ARCHITECTURE.md       # Architecture overview (to be completed)
 ├── dtap/                        # Environment-specific configurations
 │   └── dev/                     # Development environment
 │       ├── data.tf              # Data sources
@@ -51,29 +53,31 @@ Before you can deploy this infrastructure, ensure you have the following:
    ```
 
 3. **kubectl**
+
    ```bash
    # Install via Homebrew (macOS)
    brew install kubectl
-   
+
    # Verify installation
    kubectl version --client
    ```
 
 4. **direnv** (Optional but Recommended)
+
    ```bash
    # Install via Homebrew (macOS)
    brew install direnv
-   
+
    # Add to your shell (choose one)
    # For zsh (add to ~/.zshrc)
    echo 'eval "$(direnv hook zsh)"' >> ~/.zshrc
-   
+
    # For bash (add to ~/.bashrc or ~/.bash_profile)
    echo 'eval "$(direnv hook bash)"' >> ~/.bashrc
-   
+
    # Restart your shell or source the config
    source ~/.zshrc  # or ~/.bashrc
-   
+
    # Verify installation
    direnv version
    ```
@@ -111,7 +115,7 @@ Before you can deploy this infrastructure, ensure you have the following:
 
 ```bash
 git clone https://github.com/asdutoit/microservices-demo.git
-cd /path/to/microservices-demo/terraform/dtap/dev
+cd /microservices-demo/terraform/dtap/dev
 ```
 
 ### Step 2: Configure Variables
@@ -124,7 +128,7 @@ If you installed direnv, you can use the provided `.envrc` files:
 
 ```bash
 # Navigate to the project root
-cd /path/to/microservices-demo
+cd /microservices-demo
 
 # Copy the sample file and customize with your project details
 cp .envrc.sample .envrc
@@ -175,6 +179,8 @@ terraform plan
 Review the planned changes to ensure everything looks correct.
 
 ### Step 5: Deploy the Infrastructure
+
+#### Option 1: Deploy using terraform apply
 
 ```bash
 terraform apply
@@ -249,6 +255,7 @@ kubectl get pods
 - Configure gcloud CLI defaults
 
 **Benefits of using direnv:**
+
 - ✅ Automatic environment switching per directory
 - ✅ No need to remember to export variables
 - ✅ Consistent configuration across team members
@@ -256,6 +263,7 @@ kubectl get pods
 - ✅ Prevents accidentally deploying to wrong projects
 
 **Usage:**
+
 ```bash
 # Copy the sample file and customize
 cp .envrc.sample .envrc
@@ -347,13 +355,6 @@ The infrastructure follows Google Cloud best practices:
 - Security policies and network isolation
 - Resource optimization
 
-## 📚 Additional Resources
+## 📖 Quick Reference
 
-- [Online Boutique Documentation](../README.md)
-- [GKE Autopilot Documentation](https://cloud.google.com/kubernetes-engine/docs/concepts/autopilot-overview)
-- [Terraform GCP Provider](https://registry.terraform.io/providers/hashicorp/google/latest/docs)
-- [kubectl Cheat Sheet](https://kubernetes.io/docs/reference/kubectl/cheatsheet/)
-
----
-
-**Happy deploying!** 🎉
+To be completed.

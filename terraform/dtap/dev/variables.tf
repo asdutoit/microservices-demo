@@ -90,11 +90,11 @@ variable "rbac_teams" {
     members      = list(string) # List of team member emails
     contacts     = list(string) # Additional contact emails
     cost_center  = optional(string, "")
-    
+
     # Optional cross-namespace access
     additional_namespace_access = optional(list(string), [])
   }))
-  
+
   default = {
     # Example team configuration - customize as needed
     developers = {

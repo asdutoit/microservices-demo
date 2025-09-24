@@ -56,10 +56,10 @@ module "dev_kubernetes_cluster" {
   enable_rbac_cluster_access = var.enable_rbac_cluster_access
 
   # Platform RBAC integration - managed by platform-rbac module
-  enable_platform_rbac   = var.enable_platform_rbac
-  platform_admins        = var.platform_admins
-  platform_operators     = var.platform_operators
-  platform_viewers       = var.platform_viewers
+  enable_platform_rbac  = var.enable_platform_rbac
+  platform_admins       = var.platform_admins
+  platform_operators    = var.platform_operators
+  platform_viewers      = var.platform_viewers
   rbac_teams            = var.rbac_teams
   rbac_environment      = "dev"
   platform_project_name = "online-boutique"

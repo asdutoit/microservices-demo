@@ -20,7 +20,7 @@ resource "helm_release" "argocd" {
   chart      = "argo-cd"
   version    = "7.7.11" # Use specific version for stability
   namespace  = kubernetes_namespace.argocd.metadata[0].name
-  
+
   # Let Helm manage CRDs directly
   skip_crds = false
 
@@ -55,7 +55,7 @@ resource "helm_release" "argocd" {
         #   ]
         # }
         ingress = {
-          enabled = false  # Disabled - using LoadBalancer service with public IP
+          enabled = false # Disabled - using LoadBalancer service with public IP
         }
         # Enable insecure mode for local development
         extraArgs = [
@@ -146,7 +146,7 @@ resource "helm_release" "argo_rollouts" {
   chart      = "argo-rollouts"
   version    = "2.38.1" # Use the latest stable version
   namespace  = kubernetes_namespace.argo_rollouts.metadata[0].name
-  
+
   # Let Helm manage CRDs directly
   skip_crds = false
 
@@ -168,7 +168,7 @@ resource "helm_release" "argo_rollouts" {
         metrics = {
           enabled = true
           serviceMonitor = {
-            enabled = false  # Disabled because Prometheus Operator is not installed
+            enabled = false # Disabled because Prometheus Operator is not installed
           }
         }
       }
@@ -177,7 +177,7 @@ resource "helm_release" "argo_rollouts" {
       dashboard = {
         enabled = true
         service = {
-          type = "LoadBalancer"  # Use LoadBalancer for public IP access
+          type = "LoadBalancer" # Use LoadBalancer for public IP access
         }
         # Domain-based ingress (commented out - using LoadBalancer service instead)
         # Uncomment to use ingress with custom domain
@@ -197,7 +197,7 @@ resource "helm_release" "argo_rollouts" {
         #   ]
         # }
         ingress = {
-          enabled = false  # Disabled - using LoadBalancer service with public IP
+          enabled = false # Disabled - using LoadBalancer service with public IP
         }
       }
 
@@ -248,7 +248,7 @@ output "argocd_server_info" {
     username     = "admin"
     # Note: LoadBalancer IP will be available after deployment
     # Run: kubectl get svc argocd-server -n argocd -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
-    access_info  = "Use 'kubectl get svc argocd-server -n argocd' to get LoadBalancer IP"
+    access_info = "Use 'kubectl get svc argocd-server -n argocd' to get LoadBalancer IP"
     # Domain-based access (if ingress is enabled):
     # domain_url = "https://argocd.${var.domain_name != "" ? var.domain_name : "example.com"}"
   }
@@ -262,7 +262,7 @@ output "argo_rollouts_info" {
     service_name = "argo-rollouts-dashboard"
     # Note: LoadBalancer IP will be available after deployment
     # Run: kubectl get svc argo-rollouts-dashboard -n argo-rollouts -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
-    access_info  = "Use 'kubectl get svc argo-rollouts-dashboard -n argo-rollouts' to get LoadBalancer IP"
+    access_info = "Use 'kubectl get svc argo-rollouts-dashboard -n argo-rollouts' to get LoadBalancer IP"
     # Domain-based access (if ingress is enabled):
     # domain_url = "https://rollouts.${var.domain_name != "" ? var.domain_name : "example.com"}"
   }

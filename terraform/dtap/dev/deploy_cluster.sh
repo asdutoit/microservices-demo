@@ -21,7 +21,7 @@ CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
 # Configuration
-PROJECT_ID="gcp-training-329013"
+DEFAULT_PROJECT_ID="gcp-training-329013"
 CLUSTER_NAME="online-boutique-dev"
 REGION="europe-west4"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -49,6 +49,36 @@ log_step() {
 
 log_endpoint() {
     echo -e "${CYAN}🌐 ENDPOINT:${NC} $1"
+}
+
+# Function to prompt for project ID
+prompt_project_id() {
+    echo -e "${BLUE}📋 Project Configuration${NC}"
+    echo ""
+    
+    # Get current gcloud project if available
+    local current_gcloud_project
+    current_gcloud_project=$(gcloud config get-value project 2>/dev/null || echo "")
+    
+    # Show current gcloud project if different from default
+    if [[ -n "$current_gcloud_project" && "$current_gcloud_project" != "$DEFAULT_PROJECT_ID" ]]; then
+        echo -e "${YELLOW}ℹ️  Current gcloud project: $current_gcloud_project${NC}"
+    fi
+    
+    # Prompt for project ID
+    echo -n -e "${CYAN}Enter GCP Project ID [${DEFAULT_PROJECT_ID}]: ${NC}"
+    read -r user_input
+    
+    # Use default if empty, otherwise use user input
+    if [[ -z "$user_input" ]]; then
+        PROJECT_ID="$DEFAULT_PROJECT_ID"
+        log_info "Using default project: $PROJECT_ID"
+    else
+        PROJECT_ID="$user_input"
+        log_info "Using project: $PROJECT_ID"
+    fi
+    
+    echo ""
 }
 
 # Function to check prerequisites
@@ -97,7 +127,7 @@ deploy_infrastructure() {
     
     # Plan deployment
     log_info "Creating deployment plan..."
-    terraform plan -out=tfplan
+    terraform plan -var="gcp_project_id=$PROJECT_ID" -out=tfplan
     
     # Apply deployment
     log_info "Applying Terraform configuration..."
@@ -328,6 +358,7 @@ main() {
     local start_time=$(date +%s)
     
     # Run all steps
+    prompt_project_id
     check_prerequisites
     deploy_infrastructure
     setup_kubectl_context
