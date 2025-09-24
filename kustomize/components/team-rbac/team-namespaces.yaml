@@ -1,0 +1,84 @@
+# Copyright 2024 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# ============================================================================
+# Team Namespaces for Environment Separation
+# ============================================================================
+
+# QA namespace for testing
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: qa
+  labels:
+    team: qa
+    environment: test
+    app.kubernetes.io/part-of: online-boutique
+    app.kubernetes.io/component: team-rbac
+  annotations:
+    description: "QA team namespace for testing environments"
+    team: "qa"
+    environment: "test"
+    managed-by: "kustomize"
+
+---
+# Development namespace
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: dev
+  labels:
+    team: dev
+    environment: development
+    app.kubernetes.io/part-of: online-boutique
+    app.kubernetes.io/component: team-rbac
+  annotations:
+    description: "Development team namespace for feature development"
+    team: "dev"
+    environment: "development"
+    managed-by: "kustomize"
+
+---
+# Staging namespace for pre-production
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: staging
+  labels:
+    team: shared
+    environment: staging
+    app.kubernetes.io/part-of: online-boutique
+    app.kubernetes.io/component: team-rbac
+  annotations:
+    description: "Staging environment for pre-production testing"
+    team: "shared"
+    environment: "staging"
+    managed-by: "kustomize"
+
+---
+# Production namespace
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: prod
+  labels:
+    team: platform
+    environment: production
+    app.kubernetes.io/part-of: online-boutique
+    app.kubernetes.io/component: team-rbac
+  annotations:
+    description: "Production environment - restricted access"
+    team: "platform"
+    environment: "production"
+    managed-by: "kustomize"

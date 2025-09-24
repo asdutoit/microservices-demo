@@ -3,6 +3,27 @@
 ## 🚀 Essential Commands
 
 ### Initial Setup
+
+#### With direnv (Recommended)
+```bash
+# Navigate to project root
+cd /path/to/microservices-demo
+
+# Copy sample and create your environment file
+cp .envrc.sample .envrc
+vi .envrc  # Edit with your project details
+
+# Allow direnv to load environment
+direnv allow .
+
+# Navigate to terraform directory (auto-loads environment)
+cd terraform/dtap/dev
+
+# Initialize Terraform
+terraform init
+```
+
+#### Without direnv
 ```bash
 # Navigate to environment
 cd terraform/dtap/dev
@@ -68,6 +89,25 @@ terraform validate
 terraform show
 ```
 
+### direnv Commands
+```bash
+# Allow direnv in current directory
+direnv allow .
+
+# Check if direnv is working
+direnv status
+
+# Reload environment without changing directory
+direnv reload
+
+# Check what variables are loaded
+env | grep TF_VAR
+env | grep PROJECT_ID
+
+# Debug direnv issues
+direnv exec . env  # Show environment direnv would load
+```
+
 ### GCP Authentication
 ```bash
 # Login to GCP
@@ -102,7 +142,23 @@ kubectl get ingress
 
 ## 🔧 Configuration Files
 
-### terraform.tfvars (create this file)
+### .envrc (Recommended - using direnv)
+```bash
+# Copy the sample and customize
+cp .envrc.sample .envrc
+
+# Example .envrc content:
+export PROJECT_ID="your-project-id"
+export REGION="us-central1"
+export TF_VAR_gcp_project_id="$PROJECT_ID"
+export TF_VAR_region="$REGION"
+export TF_VAR_name="online-boutique"
+
+gcloud config set project $PROJECT_ID
+gcloud config set compute/region $REGION
+```
+
+### terraform.tfvars (Alternative)
 ```hcl
 gcp_project_id = "your-project-id"
 name           = "online-boutique"
@@ -111,7 +167,7 @@ namespace      = "default"
 memorystore    = false
 ```
 
-### Environment Variables
+### Environment Variables (Manual)
 ```bash
 export TF_VAR_gcp_project_id="your-project-id"
 export TF_VAR_region="us-central1"
@@ -126,7 +182,17 @@ export TF_VAR_name="online-boutique"
 4. **kubectl connection**: ~5 seconds
 5. **terraform destroy**: ~5-10 minutes
 
-## 🎯 Quick Deploy (One-liner)
+## 🎯 Quick Deploy
+
+### With direnv (Recommended)
+```bash
+# From project root with .envrc configured
+cd terraform/dtap/dev && \
+terraform init && \
+terraform apply -auto-approve
+```
+
+### Without direnv
 ```bash
 cd terraform/dtap/dev && \
 export TF_VAR_gcp_project_id="your-project-id" && \

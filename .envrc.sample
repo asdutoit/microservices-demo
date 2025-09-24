@@ -1,0 +1,27 @@
+# ==================================
+# Online Boutique Environment Config
+# ==================================
+# Copy this file to .envrc.local and customize with your values
+# Then run: direnv allow .
+
+# Your GCP Project ID
+export PROJECT_ID="your-project-id-here"
+
+# GCP Region for deployment (us-central1, europe-west4, etc.)
+export REGION="us-central1"
+
+# Terraform Variables (automatically set from above)
+export TF_VAR_gcp_project_id="$PROJECT_ID"
+export TF_VAR_region="$REGION"
+export TF_VAR_name="online-boutique"
+export TF_VAR_namespace="default"
+export TF_VAR_memorystore="false"
+
+# Configure gcloud CLI defaults
+gcloud config set project $PROJECT_ID
+gcloud config set compute/region $REGION
+
+# Optional: Set kubectl context name for easier identification
+export KUBE_CONTEXT_NAME="gke_${PROJECT_ID}_${REGION}_online-boutique"
+
+echo "🚀 Environment loaded for project: $PROJECT_ID in region: $REGION"

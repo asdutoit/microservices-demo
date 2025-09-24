@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: argo-rollouts
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/component: argo-rollouts

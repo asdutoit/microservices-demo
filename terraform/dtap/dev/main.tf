@@ -47,12 +47,22 @@ module "cluster_vpc" {
 module "dev_kubernetes_cluster" {
   source = "../../src/modules/kubernetes_cluster/"
 
-  gcp_project_id    = var.gcp_project_id
-  name              = var.name
-  region            = var.region
-  namespace         = var.namespace
-  filepath_manifest = var.filepath_manifest
-  memorystore       = var.memorystore
+  gcp_project_id             = var.gcp_project_id
+  name                       = var.name
+  region                     = var.region
+  namespace                  = var.namespace
+  filepath_manifest          = var.filepath_manifest
+  memorystore                = var.memorystore
+  enable_rbac_cluster_access = var.enable_rbac_cluster_access
+
+  # Platform RBAC integration - managed by platform-rbac module
+  enable_platform_rbac   = var.enable_platform_rbac
+  platform_admins        = var.platform_admins
+  platform_operators     = var.platform_operators
+  platform_viewers       = var.platform_viewers
+  rbac_teams            = var.rbac_teams
+  rbac_environment      = "dev"
+  platform_project_name = "online-boutique"
 
   vpc_name    = module.cluster_vpc.vpc_name
   subnet_name = module.cluster_vpc.subnet_name

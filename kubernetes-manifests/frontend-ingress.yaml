@@ -16,23 +16,32 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: frontend-ingress
+  labels:
+    app: frontend
   annotations:
-    kubernetes.io/ingress.global-static-ip-name: online-boutique-ip
-    networking.gke.io/managed-certificates: online-boutique-certificate
-    networking.gke.io/v1beta1.FrontendConfig: frontend-frontend-config
+    # Use NGINX Ingress Controller
+    kubernetes.io/ingress.class: "nginx"
+    # Optional: Enable SSL redirect
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    # Optional: Configure connection and read timeouts
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+    # Optional: Enable CORS if needed
+    nginx.ingress.kubernetes.io/enable-cors: "true"
 spec:
-  defaultBackend:
-    service:
-      name: frontend
-      port:
-        number: 80
+  ingressClassName: nginx
   rules:
   - http:
       paths:
-      - path: /*
-        pathType: ImplementationSpecific
+      - path: /
+        pathType: Prefix
         backend:
           service:
             name: frontend
             port:
               number: 80
+  # Optional: Add TLS configuration later
+  # tls:
+  # - hosts:
+  #   - your-domain.com
+  #   secretName: frontend-tls

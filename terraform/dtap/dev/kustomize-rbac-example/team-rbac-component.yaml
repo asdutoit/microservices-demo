@@ -1,0 +1,245 @@
+# ============================================================================
+# Example: Kustomize Component for Team-Based RBAC
+# This replaces the current Terraform RBAC module
+# ============================================================================
+
+# Component Kustomization
+---
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+
+resources:
+  - team-namespaces.yaml
+  - team-cluster-roles.yaml
+  - team-role-bindings.yaml
+
+---
+# team-namespaces.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: qa
+  labels:
+    team: qa
+    environment: test
+    app.kubernetes.io/part-of: online-boutique
+    app.kubernetes.io/component: rbac
+  annotations:
+    description: "QA team namespace for testing environments"
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: staging
+  labels:
+    team: shared
+    environment: staging
+    app.kubernetes.io/part-of: online-boutique
+    app.kubernetes.io/component: rbac
+  annotations:
+    description: "Staging environment for pre-production testing"
+
+---
+# team-cluster-roles.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: team-viewer
+  labels:
+    rbac.authorization.k8s.io/team-role: viewer
+    app.kubernetes.io/part-of: online-boutique
+    app.kubernetes.io/component: rbac
+  annotations:
+    description: "Read-only access for QA and monitoring teams"
+rules:
+# Core resources - read only
+- apiGroups: [""]
+  resources: ["pods", "services", "endpoints", "configmaps", "secrets"]
+  verbs: ["get", "list", "watch"]
+# Apps resources - read only  
+- apiGroups: ["apps"]
+  resources: ["deployments", "replicasets", "statefulsets", "daemonsets"]
+  verbs: ["get", "list", "watch"]
+# Events for troubleshooting
+- apiGroups: [""]
+  resources: ["events"]
+  verbs: ["get", "list", "watch"]
+# Metrics access
+- apiGroups: ["metrics.k8s.io"]
+  resources: ["pods", "nodes"]
+  verbs: ["get", "list"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: team-developer
+  labels:
+    rbac.authorization.k8s.io/team-role: developer
+    app.kubernetes.io/part-of: online-boutique
+    app.kubernetes.io/component: rbac
+  annotations:
+    description: "Development access - create/update application resources"
+rules:
+# Core resources - full access
+- apiGroups: [""]
+  resources: ["pods", "services", "endpoints", "configmaps", "secrets"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+# Apps resources - full access
+- apiGroups: ["apps"]
+  resources: ["deployments", "replicasets", "statefulsets", "daemonsets"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+# Events and logs
+- apiGroups: [""]
+  resources: ["events"]
+  verbs: ["get", "list", "watch", "create"]
+- apiGroups: [""]
+  resources: ["pods/log", "pods/status"]
+  verbs: ["get", "list"]
+# Pod exec for debugging (limited)
+- apiGroups: [""]
+  resources: ["pods/exec"]
+  verbs: ["create"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: team-devops
+  labels:
+    rbac.authorization.k8s.io/team-role: devops
+    app.kubernetes.io/part-of: online-boutique
+    app.kubernetes.io/component: rbac
+  annotations:
+    description: "DevOps access - administrative permissions for operations"
+rules:
+# Full access to most resources
+- apiGroups: ["*"]
+  resources: ["*"]
+  verbs: ["*"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: team-platform
+  labels:
+    rbac.authorization.k8s.io/team-role: platform
+    app.kubernetes.io/part-of: online-boutique
+    app.kubernetes.io/component: rbac
+  annotations:
+    description: "Platform engineering - cluster-wide admin access"
+rules:
+# Cluster admin equivalent
+- apiGroups: ["*"]
+  resources: ["*"]
+  verbs: ["*"]
+
+---
+# team-role-bindings.yaml
+# QA Team - Viewer access to test environments
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: qa-team-default-access
+  namespace: default
+  labels:
+    rbac.authorization.k8s.io/team-name: qa
+    app.kubernetes.io/part-of: online-boutique
+    app.kubernetes.io/component: rbac
+  annotations:
+    description: "QA team viewer access to default namespace"
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: team-viewer
+subjects:
+- kind: User
+  name: asdutoit@gmail.com  # Replace with actual QA team members
+  apiGroup: rbac.authorization.k8s.io
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: qa-team-qa-namespace-access
+  namespace: qa
+  labels:
+    rbac.authorization.k8s.io/team-name: qa
+    app.kubernetes.io/part-of: online-boutique
+    app.kubernetes.io/component: rbac
+  annotations:
+    description: "QA team viewer access to qa namespace"
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: team-viewer
+subjects:
+- kind: User
+  name: asdutoit@gmail.com  # Replace with actual QA team members
+  apiGroup: rbac.authorization.k8s.io
+
+---
+# Development Team - Editor access to dev environments
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: dev-team-default-access
+  namespace: default
+  labels:
+    rbac.authorization.k8s.io/team-name: dev
+    app.kubernetes.io/part-of: online-boutique
+    app.kubernetes.io/component: rbac
+  annotations:
+    description: "Development team edit access to default namespace"
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: team-developer
+subjects:
+- kind: User
+  name: asdutoit@gmail.com  # Replace with actual dev team members
+  apiGroup: rbac.authorization.k8s.io
+
+---
+# DevOps Team - Admin access to operational environments
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: devops-team-staging-access
+  namespace: staging
+  labels:
+    rbac.authorization.k8s.io/team-name: devops
+    app.kubernetes.io/part-of: online-boutique
+    app.kubernetes.io/component: rbac
+  annotations:
+    description: "DevOps team admin access to staging namespace"
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: team-devops
+subjects:
+- kind: User
+  name: asdutoit@gmail.com  # Replace with actual DevOps team members
+  apiGroup: rbac.authorization.k8s.io
+
+---
+# Platform Team - Cluster-wide admin access
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: platform-team-cluster-admin
+  labels:
+    rbac.authorization.k8s.io/team-name: platform
+    app.kubernetes.io/part-of: online-boutique
+    app.kubernetes.io/component: rbac
+  annotations:
+    description: "Platform engineering team cluster-wide admin access"
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: team-platform
+subjects:
+- kind: User
+  name: asdutoit@gmail.com  # Replace with actual platform team members
+  apiGroup: rbac.authorization.k8s.io

@@ -6,7 +6,7 @@ resource "google_container_cluster" "my_cluster" {
   # Enable autopilot for this cluster
   enable_autopilot = true
 
-  # # Configure network and subnetwork
+  # Configure network and subnetwork
   network    = var.vpc_name
   subnetwork = var.subnet_name
 
@@ -57,6 +57,34 @@ resource "null_resource" "wait_conditions" {
   }
 
   depends_on = [
-    resource.null_resource.apply_deployment
+    resource.null_resource.apply_deployment,
+  ]
+}
+
+# ==============================================================================
+# PLATFORM RBAC INTEGRATION
+# ==============================================================================
+
+# Integrate platform-level RBAC management
+module "platform_rbac" {
+  count  = var.enable_platform_rbac ? 1 : 0
+  source = "../platform-rbac"
+
+  # Pass through environment configuration
+  environment    = var.rbac_environment
+  project_name   = var.platform_project_name
+  
+  # Platform-level access
+  platform_admins    = var.platform_admins
+  platform_operators = var.platform_operators
+  platform_viewers   = var.platform_viewers
+  
+  # Team-based access
+  teams = var.rbac_teams
+  
+  # Ensure RBAC is deployed after cluster is ready
+  depends_on = [
+    google_container_cluster.my_cluster,
+    null_resource.get_cluster_credentials
   ]
 }

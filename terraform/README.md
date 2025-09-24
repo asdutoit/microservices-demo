@@ -51,13 +51,31 @@ Before you can deploy this infrastructure, ensure you have the following:
    ```
 
 3. **kubectl**
-
    ```bash
    # Install via Homebrew (macOS)
    brew install kubectl
-
+   
    # Verify installation
    kubectl version --client
+   ```
+
+4. **direnv** (Optional but Recommended)
+   ```bash
+   # Install via Homebrew (macOS)
+   brew install direnv
+   
+   # Add to your shell (choose one)
+   # For zsh (add to ~/.zshrc)
+   echo 'eval "$(direnv hook zsh)"' >> ~/.zshrc
+   
+   # For bash (add to ~/.bashrc or ~/.bash_profile)
+   echo 'eval "$(direnv hook bash)"' >> ~/.bashrc
+   
+   # Restart your shell or source the config
+   source ~/.zshrc  # or ~/.bashrc
+   
+   # Verify installation
+   direnv version
    ```
 
 ### GCP Setup
@@ -98,13 +116,41 @@ cd /path/to/microservices-demo/terraform/dtap/dev
 
 ### Step 2: Configure Variables
 
-Create a `terraform.tfvars` file or export environment variables:
+You have several options to configure your variables:
+
+#### Option A: Using direnv (Recommended)
+
+If you installed direnv, you can use the provided `.envrc` files:
 
 ```bash
-# Option 1: Create terraform.tfvars file
+# Navigate to the project root
+cd /path/to/microservices-demo
+
+# Copy the sample file and customize with your project details
+cp .envrc.sample .envrc
+vi .envrc  # Edit with your actual values
+
+# Example .envrc content:
+# export PROJECT_ID="your-project-id"
+# export REGION="us-central1"
+# export TF_VAR_gcp_project_id="$PROJECT_ID"
+# gcloud config set project $PROJECT_ID
+# gcloud config set compute/region $REGION
+
+# Allow direnv to load the environment
+direnv allow .
+
+# Navigate to terraform directory (direnv will auto-load variables)
+cd terraform/dtap/dev
+```
+
+#### Option B: Traditional Methods
+
+```bash
+# Method 1: Create terraform.tfvars file
 echo 'gcp_project_id = "your-project-id"' > terraform.tfvars
 
-# Option 2: Export environment variable
+# Method 2: Export environment variable
 export TF_VAR_gcp_project_id="your-project-id"
 ```
 
@@ -192,6 +238,34 @@ kubectl get pods
 | `region`         | GCP region for deployment        | `us-central1`     |
 | `namespace`      | Kubernetes namespace             | `default`         |
 | `memorystore`    | Enable Cloud Memorystore Redis   | `false`           |
+
+### Using direnv for Environment Management
+
+**direnv** is a shell extension that loads environment variables from `.envrc` files when you enter a directory. This project includes `.envrc` files that automatically:
+
+- Set your GCP project ID
+- Configure the deployment region
+- Set Terraform variables
+- Configure gcloud CLI defaults
+
+**Benefits of using direnv:**
+- ✅ Automatic environment switching per directory
+- ✅ No need to remember to export variables
+- ✅ Consistent configuration across team members
+- ✅ Project-specific gcloud configurations
+- ✅ Prevents accidentally deploying to wrong projects
+
+**Usage:**
+```bash
+# Copy the sample file and customize
+cp .envrc.sample .envrc
+vi .envrc  # Update with your actual values
+direnv allow .   # Allow direnv to load variables
+
+# Variables are automatically loaded when entering the directory
+cd terraform/dtap/dev  # Environment loaded automatically!
+echo $TF_VAR_gcp_project_id  # Verify variables are set
+```
 
 ### Customizing the Deployment
 

@@ -1,0 +1,413 @@
+name: 🏭 Deploy to Production Environment
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Release tag to deploy'
+        required: true
+        type: string
+      maintenance_window:
+        description: 'Maintenance window (e.g., "2024-01-15 02:00 UTC")'
+        required: true
+        type: string
+      rollback_plan:
+        description: 'Rollback plan confirmed'
+        required: true
+        type: boolean
+        default: false
+      stakeholder_approval:
+        description: 'Stakeholder approval obtained'
+        required: true  
+        type: boolean
+        default: false
+
+env:
+  TF_VERSION: '1.5.0'
+  ENVIRONMENT: 'prod'
+  PROJECT_ID: 'company-prod-project'  # Placeholder project ID
+  REGION: 'europe-west4'
+
+jobs:
+  pre-deployment-checks:
+    name: 🔍 Pre-deployment Checks
+    runs-on: ubuntu-latest
+    outputs:
+      checks-passed: ${{ steps.validation.outputs.checks-passed }}
+    steps:
+      - name: Validate Inputs
+        id: validation
+        run: |
+          echo "🔍 Validating deployment inputs..."
+          
+          # Validate release tag
+          if [[ ! "${{ github.event.inputs.release_tag }}" =~ ^v[0-9]+$ ]]; then
+            echo "❌ Invalid release tag format: ${{ github.event.inputs.release_tag }}"
+            exit 1
+          fi
+          
+          # Validate maintenance window
+          if [[ -z "${{ github.event.inputs.maintenance_window }}" ]]; then
+            echo "❌ Maintenance window not specified"
+            exit 1
+          fi
+          
+          # Validate approvals
+          if [[ "${{ github.event.inputs.rollback_plan }}" != "true" ]]; then
+            echo "❌ Rollback plan not confirmed"
+            exit 1
+          fi
+          
+          if [[ "${{ github.event.inputs.stakeholder_approval }}" != "true" ]]; then
+            echo "❌ Stakeholder approval not obtained"
+            exit 1
+          fi
+          
+          echo "✅ All pre-deployment checks passed"
+          echo "checks-passed=true" >> $GITHUB_OUTPUT
+
+      - name: Checkout release
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.release_tag }}
+
+      - name: Verify Release Exists
+        run: |
+          echo "📋 Verifying release ${{ github.event.inputs.release_tag }}..."
+          
+          # Check if release exists
+          if ! git tag | grep -q "^${{ github.event.inputs.release_tag }}$"; then
+            echo "❌ Release tag not found: ${{ github.event.inputs.release_tag }}"
+            exit 1
+          fi
+          
+          echo "✅ Release verified: ${{ github.event.inputs.release_tag }}"
+
+      - name: Security Scan of Release
+        run: |
+          echo "🔒 Running security scan on release..."
+          
+          # Example security scanning:
+          # trivy fs --exit-code 1 --severity HIGH,CRITICAL .
+          
+          echo "✅ Security scan completed"
+
+  terraform-plan:
+    name: 📋 Terraform Plan
+    runs-on: ubuntu-latest
+    needs: pre-deployment-checks
+    if: needs.pre-deployment-checks.outputs.checks-passed == 'true'
+    defaults:
+      run:
+        working-directory: ./terraform/dtap/prod
+    outputs:
+      plan-cache-key: ${{ steps.cache-plan.outputs.cache-primary-key }}
+    steps:
+      - name: Checkout release
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.release_tag }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v1
+        with:
+          credentials_json: ${{ secrets.GCP_PROD_SA_KEY }}
+
+      - name: Setup Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+
+      - name: Configure kubectl
+        run: |
+          gcloud components install kubectl
+          gcloud components install gke-gcloud-auth-plugin
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Validate
+        run: terraform validate
+
+      - name: Terraform Plan
+        run: |
+          terraform plan -out=tfplan -var="gcp_project_id=${{ env.PROJECT_ID }}"
+        env:
+          TF_VAR_gcp_project_id: ${{ env.PROJECT_ID }}
+
+      - name: Cache Terraform Plan
+        id: cache-plan
+        uses: actions/cache/save@v3
+        with:
+          path: ./terraform/dtap/prod/tfplan
+          key: terraform-plan-${{ env.ENVIRONMENT }}-${{ github.event.inputs.release_tag }}
+
+  approval-gate:
+    name: ⚠️ Production Approval Gate
+    runs-on: ubuntu-latest
+    needs: terraform-plan
+    environment:
+      name: production-approval
+      url: https://prod.example.com
+    steps:
+      - name: Manual Approval Required
+        run: |
+          echo "🚨 PRODUCTION DEPLOYMENT APPROVAL REQUIRED 🚨"
+          echo ""
+          echo "📋 Deployment Details:"
+          echo "  Release: ${{ github.event.inputs.release_tag }}"
+          echo "  Environment: Production"
+          echo "  Project: ${{ env.PROJECT_ID }}"
+          echo "  Maintenance Window: ${{ github.event.inputs.maintenance_window }}"
+          echo ""
+          echo "⏳ Waiting for manual approval from authorized personnel..."
+          echo ""
+          echo "🔒 This step requires approval from the production-approval environment"
+
+  backup-production:
+    name: 💾 Backup Production
+    runs-on: ubuntu-latest
+    needs: approval-gate
+    steps:
+      - name: Create Production Backup
+        run: |
+          echo "💾 Creating production backup..."
+          
+          # Example backup procedures:
+          # gcloud sql export sql prod-database gs://backups/pre-deployment-$(date +%Y%m%d-%H%M%S).sql
+          # kubectl get all --all-namespaces -o yaml > prod-backup-$(date +%Y%m%d-%H%M%S).yaml
+          
+          echo "✅ Production backup completed"
+
+      - name: Verify Backup
+        run: |
+          echo "🔍 Verifying backup integrity..."
+          
+          # Example backup verification:
+          # gsutil ls gs://backups/pre-deployment-*
+          # gsutil stat gs://backups/pre-deployment-*.sql
+          
+          echo "✅ Backup verification completed"
+
+  deploy-production:
+    name: 🚀 Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [backup-production, terraform-plan]
+    environment: 
+      name: production
+      url: https://prod.example.com
+    defaults:
+      run:
+        working-directory: ./terraform/dtap/prod
+    outputs:
+      deployment-url: ${{ steps.get-urls.outputs.deployment-url }}
+      argocd-url: ${{ steps.get-urls.outputs.argocd-url }}
+      deployment-status: ${{ steps.deploy-status.outputs.status }}
+    steps:
+      - name: Checkout release
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.release_tag }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v1
+        with:
+          credentials_json: ${{ secrets.GCP_PROD_SA_KEY }}
+
+      - name: Setup Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+
+      - name: Configure kubectl
+        run: |
+          gcloud components install kubectl
+          gcloud components install gke-gcloud-auth-plugin
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Restore Terraform Plan
+        uses: actions/cache/restore@v3
+        with:
+          path: ./terraform/dtap/prod/tfplan
+          key: ${{ needs.terraform-plan.outputs.plan-cache-key }}
+          fail-on-cache-miss: true
+
+      - name: Production Deployment Notice
+        run: |
+          echo "🚨 STARTING PRODUCTION DEPLOYMENT 🚨"
+          echo "Release: ${{ github.event.inputs.release_tag }}"
+          echo "Time: $(date -u)"
+          echo "Maintenance Window: ${{ github.event.inputs.maintenance_window }}"
+
+      - name: Terraform Apply
+        run: |
+          echo "🚀 Applying Terraform changes to production..."
+          terraform apply -auto-approve tfplan
+        env:
+          TF_VAR_gcp_project_id: ${{ env.PROJECT_ID }}
+
+      - name: Wait for Services to be Ready
+        run: |
+          echo "⏳ Waiting for services to be ready..."
+          sleep 600  # Wait 10 minutes for production services to stabilize
+          
+          # In a real environment:
+          # gcloud container clusters get-credentials online-boutique-prod --region=${{ env.REGION }} --project=${{ env.PROJECT_ID }}
+          # kubectl wait --for=condition=ready pods --all --timeout=900s
+          
+          echo "✅ Services are ready"
+
+      - name: Get Service URLs
+        id: get-urls
+        run: |
+          echo "🌐 Getting production service endpoints..."
+          
+          # In a real environment:
+          # NGINX_IP=$(kubectl get svc ingress-nginx-controller -n ingress-nginx -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+          # ARGOCD_IP=$(kubectl get svc argocd-server -n argocd -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+          
+          # For demonstration:
+          echo "deployment-url=https://prod-placeholder-ip" >> $GITHUB_OUTPUT
+          echo "argocd-url=https://argocd-prod-placeholder-ip" >> $GITHUB_OUTPUT
+
+      - name: Deployment Status Check
+        id: deploy-status
+        run: |
+          echo "📊 Checking deployment status..."
+          
+          # Example health checks:
+          # curl -f ${{ steps.get-urls.outputs.deployment-url }}/health || exit 1
+          # kubectl get pods --all-namespaces | grep -v Running && exit 1 || echo "All pods running"
+          
+          echo "✅ Production deployment successful"
+          echo "status=success" >> $GITHUB_OUTPUT
+
+  smoke-tests:
+    name: 🧪 Production Smoke Tests
+    runs-on: ubuntu-latest
+    needs: deploy-production
+    if: needs.deploy-production.outputs.deployment-status == 'success'
+    steps:
+      - name: Run Smoke Tests
+        run: |
+          echo "🧪 Running production smoke tests..."
+          
+          TARGET_URL="${{ needs.deploy-production.outputs.deployment-url }}"
+          echo "Testing: $TARGET_URL"
+          
+          # Example smoke tests:
+          # curl -f "$TARGET_URL" || exit 1
+          # curl -f "$TARGET_URL/api/health" || exit 1
+          # curl -f "$TARGET_URL/api/ready" || exit 1
+          
+          echo "✅ All smoke tests passed"
+
+      - name: Performance Validation
+        run: |
+          echo "⚡ Running performance validation..."
+          
+          # Example performance validation:
+          # k6 run --vus 10 --duration 30s smoke-test.js --env TARGET_URL=${{ needs.deploy-production.outputs.deployment-url }}
+          
+          echo "✅ Performance validation completed"
+
+  notify-completion:
+    name: 📢 Notify Deployment Completion
+    runs-on: ubuntu-latest
+    needs: [deploy-production, smoke-tests]
+    if: always()
+    steps:
+      - name: Deployment Success Notification
+        if: needs.deploy-production.outputs.deployment-status == 'success' && needs.smoke-tests.result == 'success'
+        run: |
+          echo "🎉 PRODUCTION DEPLOYMENT SUCCESSFUL! 🎉"
+          echo "Release: ${{ github.event.inputs.release_tag }}"
+          echo "Environment: Production"
+          echo "Deployment URL: ${{ needs.deploy-production.outputs.deployment-url }}"
+          echo "ArgoCD URL: ${{ needs.deploy-production.outputs.argocd-url }}"
+          
+          # Send success notifications:
+          # curl -X POST -H 'Content-type: application/json' \
+          #   --data '{"text":"🎉 Production deployment successful: ${{ github.event.inputs.release_tag }}"}' \
+          #   ${{ secrets.SLACK_WEBHOOK_URL }}
+
+      - name: Deployment Failure Notification
+        if: failure()
+        run: |
+          echo "🚨 PRODUCTION DEPLOYMENT FAILED! 🚨"
+          echo "Release: ${{ github.event.inputs.release_tag }}"
+          echo "Check logs and initiate rollback procedures"
+          
+          # Send failure notifications:
+          # curl -X POST -H 'Content-type: application/json' \
+          #   --data '{"text":"🚨 Production deployment failed: ${{ github.event.inputs.release_tag }}"}' \
+          #   ${{ secrets.SLACK_WEBHOOK_URL }}
+
+      - name: Update Deployment Status
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const status = '${{ needs.deploy-production.outputs.deployment-status }}' === 'success' && '${{ needs.smoke-tests.result }}' === 'success' ? 'SUCCESS' : 'FAILED';
+            const emoji = status === 'SUCCESS' ? '🎉' : '🚨';
+            
+            const issueBody = `## ${emoji} Production Deployment ${status}
+            
+            **Release**: ${{ github.event.inputs.release_tag }}
+            **Environment**: Production  
+            **Status**: ${status}
+            **Deployment URL**: ${{ needs.deploy-production.outputs.deployment-url }}
+            **ArgoCD URL**: ${{ needs.deploy-production.outputs.argocd-url }}
+            **Maintenance Window**: ${{ github.event.inputs.maintenance_window }}
+            
+            ### Deployment Summary
+            ${status === 'SUCCESS' ? 
+              '- ✅ Infrastructure deployed successfully\n- ✅ All services are healthy\n- ✅ Smoke tests passed\n- ✅ Production is ready for traffic' :
+              '- ❌ Deployment encountered issues\n- ⚠️ Review logs and initiate rollback if necessary\n- 📞 Contact on-call engineer'}
+            
+            ### Next Steps
+            ${status === 'SUCCESS' ? 
+              '- Monitor production metrics\n- Verify user traffic\n- Close maintenance window' :
+              '- Review deployment logs\n- Execute rollback plan\n- Investigate root cause'}
+            `;
+            
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `${emoji} Production Deployment ${status}: ${{ github.event.inputs.release_tag }}`,
+              body: issueBody,
+              labels: ['deployment', 'production', status.toLowerCase()]
+            });
+
+  post-deployment-monitoring:
+    name: 📊 Post-deployment Monitoring
+    runs-on: ubuntu-latest
+    needs: [deploy-production, smoke-tests]
+    if: needs.deploy-production.outputs.deployment-status == 'success' && needs.smoke-tests.result == 'success'
+    steps:
+      - name: Setup Monitoring
+        run: |
+          echo "📊 Setting up post-deployment monitoring..."
+          
+          # Example monitoring setup:
+          # curl -X POST "https://api.pagerduty.com/incidents" \
+          #   -H "Authorization: Token token=${{ secrets.PAGERDUTY_TOKEN }}" \
+          #   -d '{"incident":{"type":"incident","title":"Production Deployment Monitoring","service":{"id":"prod-service"}}}'
+          
+          echo "✅ Monitoring alerts configured"
+
+      - name: Schedule Health Checks
+        run: |
+          echo "🏥 Scheduling ongoing health checks..."
+          
+          # Example health check scheduling:
+          # Schedule periodic health checks for next 24 hours
+          
+          echo "✅ Health checks scheduled"

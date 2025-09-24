@@ -12,6 +12,10 @@ terraform {
       source  = "hashicorp/kubernetes"
       version = "2.22.0"
     }
+    helm = {
+      source  = "hashicorp/helm"
+      version = "~> 2.14.0"
+    }
   }
 }
 
@@ -26,8 +30,16 @@ provider "google-beta" {
 }
 
 provider "kubernetes" {
-  host                   = "https://${module.cluster_vpc.endpoint}"
-  cluster_ca_certificate = base64decode(module.cluster_vpc.ca_certificate)
+  host                   = "https://${module.dev_kubernetes_cluster.cluster_endpoint}"
+  cluster_ca_certificate = base64decode(module.dev_kubernetes_cluster.cluster_ca_certificate)
   token                  = data.google_client_config.default.access_token
+}
+
+provider "helm" {
+  kubernetes {
+    host                   = "https://${module.dev_kubernetes_cluster.cluster_endpoint}"
+    cluster_ca_certificate = base64decode(module.dev_kubernetes_cluster.cluster_ca_certificate)
+    token                  = data.google_client_config.default.access_token
+  }
 }
 

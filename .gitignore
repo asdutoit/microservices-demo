@@ -30,3 +30,5 @@ terraform/.terraform/
 terraform/dtap/dev/.terraform/
 terraform/dtap/dev/terraform.tfstate*
 terraform/dtap/dev/terraform.tfvars
+.envrc
+terraform/dtap/dev/.envrc
