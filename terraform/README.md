@@ -31,7 +31,7 @@ Before you can deploy this infrastructure, ensure you have the following:
 
 ### Required Tools
 
-1. **Terraform** (v1.0 or later)
+1. **Terraform** (v1.5 or later)
 
    ```bash
    # Install via Homebrew (macOS)
@@ -114,11 +114,45 @@ Before you can deploy this infrastructure, ensure you have the following:
 ### Step 1: Clone and Navigate
 
 ```bash
-git clone https://github.com/asdutoit/microservices-demo.git
-cd /microservices-demo/terraform/dtap/dev
+git clone https://github.com/your-org/microservices-demo.git
+cd microservices-demo/terraform/dtap/dev
 ```
 
-### Step 2: Configure Variables
+### Step 2: Configure Terraform State Backend
+
+**Important**: Before running Terraform, you need to configure the backend state storage.
+
+1. **Create a Cloud Storage bucket** for Terraform state:
+
+   ```bash
+   # Create a unique bucket name (replace with your own)
+   export BUCKET_NAME="your-project-id-terraform-state"
+   
+   # Create the bucket
+   gsutil mb gs://$BUCKET_NAME
+   
+   # Enable versioning for state backup
+   gsutil versioning set on gs://$BUCKET_NAME
+   ```
+
+2. **Update the state.tf file** with your bucket name:
+
+   ```bash
+   # Edit the state.tf file
+   code state.tf  # (or "vi" if your a psychopath)
+   ```
+   
+   Update the bucket name in `state.tf`:
+   ```hcl
+   terraform {
+     backend "gcs" {
+       bucket = "your-project-id-terraform-state"  # Change this!
+       prefix = "terraform/state/dev"
+     }
+   }
+   ```
+
+### Step 3: Configure Variables
 
 You have several options to configure your variables:
 
@@ -128,7 +162,7 @@ If you installed direnv, you can use the provided `.envrc` files:
 
 ```bash
 # Navigate to the project root
-cd /microservices-demo
+cd microservices-demo
 
 # Copy the sample file and customize with your project details
 cp .envrc.sample .envrc
@@ -158,7 +192,7 @@ echo 'gcp_project_id = "your-project-id"' > terraform.tfvars
 export TF_VAR_gcp_project_id="your-project-id"
 ```
 
-### Step 3: Initialize Terraform
+### Step 4: Initialize Terraform
 
 ```bash
 terraform init
@@ -170,7 +204,7 @@ This will:
 - Initialize the backend
 - Download modules
 
-### Step 4: Plan the Deployment
+### Step 5: Plan the Deployment
 
 ```bash
 terraform plan
@@ -178,9 +212,15 @@ terraform plan
 
 Review the planned changes to ensure everything looks correct.
 
-### Step 5: Deploy the Infrastructure
+### Step 6: Deploy the Infrastructure
 
-#### Option 1: Deploy using terraform apply
+#### Option 1: Deploy using the bash script
+
+```bash
+./deploy_cluster.sh
+```
+
+#### Option 2: Deploy using Terraform CLI
 
 ```bash
 terraform apply
