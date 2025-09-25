@@ -108,6 +108,92 @@ Before you can deploy this infrastructure, ensure you have the following:
    - `Compute Network Admin`
    - `Service Account Admin`
    - `Project IAM Admin`
+   - `Service Usage Admin` (for enabling APIs)
+
+### GitHub Actions CI/CD Setup (Optional)
+
+To use the GitHub Actions workflows for automated deployment, you'll need to set up Workload Identity Federation:
+
+1. **Create a Workload Identity Pool**
+
+   ```bash
+   # Set your project variables
+   export PROJECT_ID="your-project-id"
+   export PROJECT_NUMBER=$(gcloud projects describe $PROJECT_ID --format="value(projectNumber)")
+   
+   # Create workload identity pool
+   gcloud iam workload-identity-pools create "github-actions-pool" \
+     --project="$PROJECT_ID" \
+     --location="global" \
+     --display-name="GitHub Actions Pool"
+   
+   # Create OIDC provider
+   gcloud iam workload-identity-pools providers create-oidc "github-provider" \
+     --project="$PROJECT_ID" \
+     --location="global" \
+     --workload-identity-pool="github-actions-pool" \
+     --display-name="GitHub Provider" \
+     --attribute-mapping="google.subject=assertion.sub,attribute.repository=assertion.repository" \
+     --issuer-uri="https://token.actions.githubusercontent.com"
+   ```
+
+2. **Grant Required Permissions**
+
+   ```bash
+   # Define the workload identity pool member
+   export WI_MEMBER="principalSet://iam.googleapis.com/projects/$PROJECT_NUMBER/locations/global/workloadIdentityPools/github-actions-pool/attribute.repository/your-username/microservices-demo"
+   
+   # Grant essential roles for Terraform deployment
+   gcloud projects add-iam-policy-binding $PROJECT_ID \
+     --role="roles/serviceusage.serviceUsageAdmin" \
+     --member="$WI_MEMBER"
+   
+   gcloud projects add-iam-policy-binding $PROJECT_ID \
+     --role="roles/container.admin" \
+     --member="$WI_MEMBER"
+   
+   gcloud projects add-iam-policy-binding $PROJECT_ID \
+     --role="roles/compute.admin" \
+     --member="$WI_MEMBER"
+   
+   gcloud projects add-iam-policy-binding $PROJECT_ID \
+     --role="roles/iam.serviceAccountAdmin" \
+     --member="$WI_MEMBER"
+   
+   gcloud projects add-iam-policy-binding $PROJECT_ID \
+     --role="roles/servicenetworking.networksAdmin" \
+     --member="$WI_MEMBER"
+   
+   # Grant storage permissions for Terraform state
+   gcloud storage buckets add-iam-policy-binding "gs://your-terraform-state-bucket" \
+     --role="roles/storage.objectAdmin" \
+     --member="$WI_MEMBER"
+   ```
+
+3. **Configure GitHub Repository Secrets**
+
+   Go to your GitHub repository → Settings → Secrets and variables → Actions, and add:
+   
+   ```
+   GCP_WI_PROVIDER: projects/PROJECT_NUMBER/locations/global/workloadIdentityPools/github-actions-pool/providers/github-provider
+   ```
+
+   Replace `PROJECT_NUMBER` with your actual project number.
+
+4. **Test the Setup**
+
+   ```bash
+   # Verify workload identity pool exists
+   gcloud iam workload-identity-pools list --location=global --project=$PROJECT_ID
+   
+   # Check permissions (replace with your actual member)
+   gcloud projects get-iam-policy $PROJECT_ID \
+     --flatten="bindings[].members" \
+     --format="table(bindings.role)" \
+     --filter="bindings.members:$WI_MEMBER"
+   ```
+
+   **📖 Reference**: [Google GitHub Actions Auth Documentation](https://github.com/google-github-actions/auth?tab=readme-ov-file#preferred-direct-workload-identity-federation)
 
 ## 🚀 Getting Started
 

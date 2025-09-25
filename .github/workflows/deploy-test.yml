@@ -167,32 +167,21 @@ jobs:
       - name: Terraform Init
         run: terraform init
 
-      - name: Debug Cache Key
+      - name: Skip Cache Restore
         run: |
-          echo "Expected cache key: ${{ needs.terraform-plan.outputs.plan-cache-key }}"
+          echo "ℹ️ Skipping cache restore - creating fresh plan to avoid stale state issues"
           echo "Working directory: $(pwd)"
           ls -la .
 
-      - name: Restore Terraform Plan
-        uses: actions/cache/restore@v3
-        with:
-          path: ./terraform/dtap/dev/tfplan
-          key: ${{ needs.terraform-plan.outputs.plan-cache-key }}
-          fail-on-cache-miss: true
-
-      - name: Verify Plan File
+      - name: Create Fresh Plan for Apply
         run: |
-          echo "Checking for tfplan file..."
-          ls -la tfplan || echo "tfplan file not found!"
-          if [ -f tfplan ]; then
-            echo "✅ Plan file found and ready for apply"
-          else
-            echo "❌ Plan file missing - this will cause apply to fail"
-            exit 1
-          fi
+          echo "🔄 Creating fresh plan to avoid stale state issues..."
+          terraform plan -out=tfplan-fresh -var="gcp_project_id=${{ env.PROJECT_ID }}"
+        env:
+          TF_VAR_gcp_project_id: ${{ env.PROJECT_ID }}
 
       - name: Terraform Apply
-        run: terraform apply -auto-approve tfplan
+        run: terraform apply -auto-approve tfplan-fresh
         env:
           TF_VAR_gcp_project_id: ${{ env.PROJECT_ID }}
 
