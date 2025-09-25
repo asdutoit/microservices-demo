@@ -278,6 +278,7 @@ get_service_endpoints() {
     fi
     
     # Get Online Boutique Frontend (if available)
+    local nginx_ip_boutique=$(get_lb_ip "ingress-nginx" "ingress-nginx-controller")
     echo ""
     log_endpoint "Online Boutique Application:"
     local frontend_svc=$(kubectl get svc -n development --no-headers 2>/dev/null | grep frontend || echo "")
@@ -288,6 +289,8 @@ get_service_endpoints() {
             echo "   📍 External IP: $frontend_ip"
             if [[ "$frontend_ip" != "pending" ]]; then
                 echo "   🔗 Access URL: http://$frontend_ip"
+            else
+                echo "   🔗 Access URL: http://$nginx_ip_boutique"
             fi
         else
             echo "   📍 Service Type: $frontend_type (use port-forward or ingress)"
@@ -343,7 +346,7 @@ display_next_steps() {
     echo "   2. 🚀 Use Argo Rollouts for advanced deployment strategies"
     echo "   3. 📊 Explore the Online Boutique microservices demo"
     echo "   4. 🔧 Configure custom domains by uncommenting ingress configs"
-    echo "   5. 🗑️  Clean up when done: terraform destroy"
+    echo "   5. 🗑️  Clean up when done: run \"./destroy_cluster.sh\" or \"terraform destroy\""
     echo ""
     echo -e "${GREEN}🎉 Happy Kubernetes-ing!${NC}"
 }
