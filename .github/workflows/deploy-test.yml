@@ -28,6 +28,8 @@ permissions:
   pull-requests: write
   id-token: write
   actions: read
+  checks: write
+  security-events: write
 
 jobs:
   security-scan:
