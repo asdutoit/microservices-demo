@@ -10,7 +10,7 @@ terraform/
 ├── QUICK_REFERENCE.md           # Quick reference guide (to be completed)
 ├── README_ARCHITECTURE.md       # Architecture overview (to be completed)
 ├── dtap/                        # Environment-specific configurations
-│   └── dev/                     # Development environment
+│   ├── dev/                     # Development environment
 │       ├── data.tf              # Data sources
 │       ├── main.tf              # Main configuration
 │       ├── output.tf            # Output values
@@ -18,10 +18,14 @@ terraform/
 │       ├── roles.tf             # IAM roles and permissions
 │       ├── state.tf             # Terraform state configuration
 │       └── variables.tf         # Variable definitions
+│   ├── test/                    # Testing environment
+│   ├── prod/                    # Production environment
+│   └── acc/                     # Acceptance environment
 └── src/                         # Reusable modules
     └── modules/
         ├── enable_google_apis/  # Module to enable required GCP APIs
         ├── kubernetes_cluster/  # GKE cluster and app deployment
+        ├── platform-rbac/       # Platform RBAC setup
         └── vpc/                 # VPC network configuration
 ```
 
@@ -120,13 +124,13 @@ To use the GitHub Actions workflows for automated deployment, you'll need to set
    # Set your project variables
    export PROJECT_ID="your-project-id"
    export PROJECT_NUMBER=$(gcloud projects describe $PROJECT_ID --format="value(projectNumber)")
-   
+
    # Create workload identity pool
    gcloud iam workload-identity-pools create "github-actions-pool" \
      --project="$PROJECT_ID" \
      --location="global" \
      --display-name="GitHub Actions Pool"
-   
+
    # Create OIDC provider
    gcloud iam workload-identity-pools providers create-oidc "github-provider" \
      --project="$PROJECT_ID" \
@@ -142,32 +146,32 @@ To use the GitHub Actions workflows for automated deployment, you'll need to set
    ```bash
    # Define the workload identity pool member
    export WI_MEMBER="principalSet://iam.googleapis.com/projects/$PROJECT_NUMBER/locations/global/workloadIdentityPools/github-actions-pool/attribute.repository/your-username/microservices-demo"
-   
+
    # Grant essential roles for Terraform deployment
    gcloud projects add-iam-policy-binding $PROJECT_ID \
      --role="roles/serviceusage.serviceUsageAdmin" \
      --member="$WI_MEMBER"
-   
+
    gcloud projects add-iam-policy-binding $PROJECT_ID \
      --role="roles/container.admin" \
      --member="$WI_MEMBER"
-   
+
    gcloud projects add-iam-policy-binding $PROJECT_ID \
      --role="roles/compute.admin" \
      --member="$WI_MEMBER"
-   
+
    gcloud projects add-iam-policy-binding $PROJECT_ID \
      --role="roles/iam.serviceAccountAdmin" \
      --member="$WI_MEMBER"
-   
+
    gcloud projects add-iam-policy-binding $PROJECT_ID \
      --role="roles/iam.serviceAccountUser" \
      --member="$WI_MEMBER"
-   
+
    gcloud projects add-iam-policy-binding $PROJECT_ID \
      --role="roles/servicenetworking.networksAdmin" \
      --member="$WI_MEMBER"
-   
+
    # Grant storage permissions for Terraform state
    gcloud storage buckets add-iam-policy-binding "gs://your-terraform-state-bucket" \
      --role="roles/storage.objectAdmin" \
@@ -177,7 +181,7 @@ To use the GitHub Actions workflows for automated deployment, you'll need to set
 3. **Configure GitHub Repository Secrets**
 
    Go to your GitHub repository → Settings → Secrets and variables → Actions, and add:
-   
+
    ```
    GCP_WI_PROVIDER: projects/PROJECT_NUMBER/locations/global/workloadIdentityPools/github-actions-pool/providers/github-provider
    ```
@@ -189,7 +193,7 @@ To use the GitHub Actions workflows for automated deployment, you'll need to set
    ```bash
    # Verify workload identity pool exists
    gcloud iam workload-identity-pools list --location=global --project=$PROJECT_ID
-   
+
    # Check permissions (replace with your actual member)
    gcloud projects get-iam-policy $PROJECT_ID \
      --flatten="bindings[].members" \
@@ -217,10 +221,10 @@ cd microservices-demo/terraform/dtap/dev
    ```bash
    # Create a unique bucket name (replace with your own)
    export BUCKET_NAME="your-project-id-terraform-state"
-   
+
    # Create the bucket
    gsutil mb gs://$BUCKET_NAME
-   
+
    # Enable versioning for state backup
    gsutil versioning set on gs://$BUCKET_NAME
    ```
@@ -231,8 +235,9 @@ cd microservices-demo/terraform/dtap/dev
    # Edit the state.tf file
    code state.tf  # (or "vi" if your a psychopath)
    ```
-   
+
    Update the bucket name in `state.tf`:
+
    ```hcl
    terraform {
      backend "gcs" {
@@ -340,6 +345,7 @@ terraform apply
 ```
 
 This approach:
+
 - ✅ Focuses on infrastructure provisioning
 - ✅ Avoids CI/CD timeout issues
 - ✅ Lets platform teams verify pod health manually
@@ -399,15 +405,15 @@ kubectl get pods
 
 ### Environment Variables
 
-| Variable              | Description                                | Default           |
-| --------------------- | ------------------------------------------ | ----------------- |
-| `gcp_project_id`      | GCP Project ID                             | _Required_        |
-| `name`                | Cluster and resource name prefix           | `online-boutique` |
-| `region`              | GCP region for deployment                  | `us-central1`     |
-| `namespace`           | Kubernetes namespace                       | `default`         |
-| `memorystore`         | Enable Cloud Memorystore Redis            | `false`           |
-| `skip_pod_wait`       | Skip waiting for pods (CI/CD mode)        | `false`           |
-| `pod_readiness_timeout` | Timeout for pod readiness (seconds)     | `900`             |
+| Variable                | Description                         | Default           |
+| ----------------------- | ----------------------------------- | ----------------- |
+| `gcp_project_id`        | GCP Project ID                      | _Required_        |
+| `name`                  | Cluster and resource name prefix    | `online-boutique` |
+| `region`                | GCP region for deployment           | `us-central1`     |
+| `namespace`             | Kubernetes namespace                | `default`         |
+| `memorystore`           | Enable Cloud Memorystore Redis      | `false`           |
+| `skip_pod_wait`         | Skip waiting for pods (CI/CD mode)  | `false`           |
+| `pod_readiness_timeout` | Timeout for pod readiness (seconds) | `900`             |
 
 ### Using direnv for Environment Management
 

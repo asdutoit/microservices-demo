@@ -8,6 +8,10 @@ Navigate to the `terraform\dtap\dev` or click here [directory](terraform/dtap/de
 
 Refer to the README.md ([this file](terraform/README.md)) in the `terraform` directory for detailed instructions on prerequisites, setup, and deployment.
 
+Refer to the README_ARCHITECTURE.md ([this file](terraform/README_ARCHITECTURE.md)) in the `terraform` directory for an overview of the architecture and components used in this deployment.
+
+Refer to the QUICK_REFERENCE.md ([this file](terraform/QUICK_REFERENCE.md)) in the `terraform` directory for a quick reference of essential commands and workflows.
+
 TLDR: This is a modified version of the original repository to suit specific needs. Please refer to the original repository for the unmodified version.
 
 **References:**
