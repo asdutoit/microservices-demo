@@ -16,7 +16,7 @@ on:
         type: boolean
 
 env:
-  TF_VERSION: "1.5.0"
+  TF_VERSION: "1.11.2"
   ENVIRONMENT: "acc"
   PROJECT_ID: "company-acc-project" # Placeholder project ID
   REGION: "europe-west4"
