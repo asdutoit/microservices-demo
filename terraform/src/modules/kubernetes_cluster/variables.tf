@@ -189,3 +189,15 @@ variable "skip_app_deployment" {
   type        = bool
   default     = false
 }
+
+variable "pod_readiness_timeout" {
+  description = "Timeout in seconds to wait for pods to be ready. Increase for GKE Autopilot environments."
+  type        = number
+  default     = 900
+}
+
+variable "skip_pod_wait" {
+  description = "Skip waiting for pods to be ready. Set to true in CI/CD environments to avoid timeouts."
+  type        = bool
+  default     = false
+}

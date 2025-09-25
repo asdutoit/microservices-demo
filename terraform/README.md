@@ -326,6 +326,38 @@ Type `yes` when prompted. This will:
 
 ⏱️ **Note**: Initial deployment takes approximately 10-15 minutes.
 
+### CI/CD Deployment
+
+For GitHub Actions or other CI/CD environments, use these variables to optimize deployment:
+
+```bash
+# Skip pod readiness checks (recommended for CI/CD)
+terraform apply -var="skip_pod_wait=true"
+
+# Or set via environment variable
+export TF_VAR_skip_pod_wait=true
+terraform apply
+```
+
+This approach:
+- ✅ Focuses on infrastructure provisioning
+- ✅ Avoids CI/CD timeout issues
+- ✅ Lets platform teams verify pod health manually
+- ✅ Reduces deployment time in automated environments
+
+**Manual verification after CI/CD deployment:**
+
+```bash
+# Connect to cluster
+gcloud container clusters get-credentials CLUSTER_NAME --region REGION --project PROJECT_ID
+
+# Check pod status
+kubectl get pods -n NAMESPACE
+
+# Wait for pods manually if needed
+kubectl wait --for=condition=ready pods --all -n NAMESPACE --timeout=900s
+```
+
 ## 🔌 Connecting to Your Cluster
 
 After deployment, get the kubectl connection command:
@@ -367,13 +399,15 @@ kubectl get pods
 
 ### Environment Variables
 
-| Variable         | Description                      | Default           |
-| ---------------- | -------------------------------- | ----------------- |
-| `gcp_project_id` | GCP Project ID                   | _Required_        |
-| `name`           | Cluster and resource name prefix | `online-boutique` |
-| `region`         | GCP region for deployment        | `us-central1`     |
-| `namespace`      | Kubernetes namespace             | `default`         |
-| `memorystore`    | Enable Cloud Memorystore Redis   | `false`           |
+| Variable              | Description                                | Default           |
+| --------------------- | ------------------------------------------ | ----------------- |
+| `gcp_project_id`      | GCP Project ID                             | _Required_        |
+| `name`                | Cluster and resource name prefix           | `online-boutique` |
+| `region`              | GCP region for deployment                  | `us-central1`     |
+| `namespace`           | Kubernetes namespace                       | `default`         |
+| `memorystore`         | Enable Cloud Memorystore Redis            | `false`           |
+| `skip_pod_wait`       | Skip waiting for pods (CI/CD mode)        | `false`           |
+| `pod_readiness_timeout` | Timeout for pod readiness (seconds)     | `900`             |
 
 ### Using direnv for Environment Management
 
