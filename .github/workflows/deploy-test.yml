@@ -60,7 +60,7 @@ jobs:
     environment: test
     defaults:
       run:
-        working-directory: ./terraform/dtap/test
+        working-directory: ./terraform/dtap/dev
     outputs:
       plan-cache-key: ${{ steps.cache-plan.outputs.cache-primary-key }}
     steps:
@@ -104,7 +104,7 @@ jobs:
         id: cache-plan
         uses: actions/cache/save@v3
         with:
-          path: ./terraform/dtap/test/tfplan
+          path: ./terraform/dtap/dev/tfplan
           key: terraform-plan-${{ env.ENVIRONMENT }}-${{ github.sha }}
 
       - name: Comment PR with Plan
@@ -140,7 +140,7 @@ jobs:
     environment: test
     defaults:
       run:
-        working-directory: ./terraform/dtap/test
+        working-directory: ./terraform/dtap/dev
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -169,7 +169,7 @@ jobs:
       - name: Restore Terraform Plan
         uses: actions/cache/restore@v3
         with:
-          path: ./terraform/dtap/test/tfplan
+          path: ./terraform/dtap/dev/tfplan
           key: ${{ needs.terraform-plan.outputs.plan-cache-key }}
           fail-on-cache-miss: true
 
@@ -239,7 +239,7 @@ jobs:
     environment: test
     defaults:
       run:
-        working-directory: ./terraform/dtap/test
+        working-directory: ./terraform/dtap/dev
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
