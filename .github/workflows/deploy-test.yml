@@ -62,7 +62,7 @@ jobs:
       run:
         working-directory: ./terraform/dtap/dev
     outputs:
-      plan-cache-key: ${{ steps.cache-plan.outputs.cache-primary-key }}
+      plan-cache-key: terraform-plan-${{ env.ENVIRONMENT }}-${{ github.sha }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -151,9 +151,10 @@ jobs:
           terraform_version: ${{ env.TF_VERSION }}
 
       - name: Authenticate to Google Cloud
-        uses: google-github-actions/auth@v1
+        uses: google-github-actions/auth@v3
         with:
-          credentials_json: ${{ secrets.GCP_TEST_SA_KEY }}
+          project_id: ${{ env.PROJECT_ID }}
+          workload_identity_provider: ${{ secrets.GCP_WI_PROVIDER }}
 
       - name: Setup Google Cloud SDK
         uses: google-github-actions/setup-gcloud@v1
@@ -166,12 +167,29 @@ jobs:
       - name: Terraform Init
         run: terraform init
 
+      - name: Debug Cache Key
+        run: |
+          echo "Expected cache key: ${{ needs.terraform-plan.outputs.plan-cache-key }}"
+          echo "Working directory: $(pwd)"
+          ls -la .
+
       - name: Restore Terraform Plan
         uses: actions/cache/restore@v3
         with:
           path: ./terraform/dtap/dev/tfplan
           key: ${{ needs.terraform-plan.outputs.plan-cache-key }}
           fail-on-cache-miss: true
+
+      - name: Verify Plan File
+        run: |
+          echo "Checking for tfplan file..."
+          ls -la tfplan || echo "tfplan file not found!"
+          if [ -f tfplan ]; then
+            echo "✅ Plan file found and ready for apply"
+          else
+            echo "❌ Plan file missing - this will cause apply to fail"
+            exit 1
+          fi
 
       - name: Terraform Apply
         run: terraform apply -auto-approve tfplan
