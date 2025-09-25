@@ -34,8 +34,10 @@ resource "null_resource" "get_cluster_credentials" {
   depends_on = [google_container_cluster.my_cluster]
 }
 
-# Apply YAML kubernetes-manifest configurations
+# Apply YAML kubernetes-manifest configurations (only if not skipped)
 resource "null_resource" "apply_deployment" {
+  count = var.skip_app_deployment ? 0 : 1
+  
   provisioner "local-exec" {
     interpreter = ["bash", "-exc"]
     command     = "kubectl apply -k ${var.filepath_manifest} -n ${var.namespace}"
@@ -46,8 +48,10 @@ resource "null_resource" "apply_deployment" {
   ]
 }
 
-# Wait condition for all Pods to be ready before finishing
+# Wait condition for all Pods to be ready before finishing (only if app deployed)
 resource "null_resource" "wait_conditions" {
+  count = var.skip_app_deployment ? 0 : 1
+  
   provisioner "local-exec" {
     interpreter = ["bash", "-exc"]
     command     = <<-EOT
@@ -57,7 +61,7 @@ resource "null_resource" "wait_conditions" {
   }
 
   depends_on = [
-    resource.null_resource.apply_deployment,
+    null_resource.apply_deployment,
   ]
 }
 

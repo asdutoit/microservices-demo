@@ -183,3 +183,9 @@ variable "rbac_environment" {
   type        = string
   default     = "dev"
 }
+
+variable "skip_app_deployment" {
+  description = "Skip application deployment (useful for infrastructure-only testing)"
+  type        = bool
+  default     = false
+}
