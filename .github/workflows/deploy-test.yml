@@ -105,7 +105,9 @@ jobs:
 
       - name: Terraform Plan
         run: |
-          terraform plan -out=tfplan -var="gcp_project_id=${{ env.PROJECT_ID }}"
+          terraform plan -out=tfplan \
+            -var="gcp_project_id=${{ env.PROJECT_ID }}" \
+            -var="name=online-boutique-${{ env.ENVIRONMENT }}"
         env:
           TF_VAR_gcp_project_id: ${{ env.PROJECT_ID }}
 
@@ -186,7 +188,8 @@ jobs:
         run: |
           echo "🔑 Pre-configuring kubectl credentials for Terraform..."
           # This ensures kubectl is ready when Terraform's null_resource runs
-          gcloud container clusters get-credentials online-boutique \
+          CLUSTER_NAME="online-boutique-${{ env.ENVIRONMENT }}"
+          gcloud container clusters get-credentials "$CLUSTER_NAME" \
             --region=${{ env.REGION }} \
             --project=${{ env.PROJECT_ID }} || echo "Cluster not ready yet, will retry during Terraform"
 
@@ -195,6 +198,7 @@ jobs:
           echo "🔄 Creating fresh plan to avoid stale state issues..."
           terraform plan -out=tfplan-fresh \
             -var="gcp_project_id=${{ env.PROJECT_ID }}" \
+            -var="name=online-boutique-${{ env.ENVIRONMENT }}" \
             -var="namespace=development"
         env:
           TF_VAR_gcp_project_id: ${{ env.PROJECT_ID }}
@@ -211,7 +215,8 @@ jobs:
           sleep 180  # Wait 3 minutes for initial deployment
 
           # Check if cluster is accessible
-          gcloud container clusters get-credentials online-boutique-test --region=${{ env.REGION }} --project=${{ env.PROJECT_ID }} || echo "Cluster not accessible (expected for placeholder)"
+          CLUSTER_NAME="online-boutique-${{ env.ENVIRONMENT }}"
+          gcloud container clusters get-credentials "$CLUSTER_NAME" --region=${{ env.REGION }} --project=${{ env.PROJECT_ID }} || echo "Cluster not accessible (expected for placeholder)"
 
           echo "✅ Deployment completed"
 
@@ -239,7 +244,7 @@ jobs:
             **Region:** ${{ env.REGION }}
 
             **Services Deployed:**
-            - ✅ GKE Autopilot Cluster: \`online-boutique-test\`
+            - ✅ GKE Autopilot Cluster: \`online-boutique-${{ env.ENVIRONMENT }}\`
             - ✅ NGINX Ingress Controller
             - ✅ ArgoCD Server  
             - ✅ Argo Rollouts Dashboard
@@ -284,13 +289,37 @@ jobs:
       - name: Setup Google Cloud SDK
         uses: google-github-actions/setup-gcloud@v1
 
+      - name: Configure kubectl for cleanup
+        run: |
+          echo "🔧 Installing kubectl and auth plugin for cleanup..."
+          gcloud components install kubectl
+          gcloud components install gke-gcloud-auth-plugin
+          
+          # Verify installations
+          kubectl version --client
+          gke-gcloud-auth-plugin --version
+          
+          # Set up PATH for auth plugin
+          echo "$(gcloud info --format='value(basic.python_location)')" >> $GITHUB_PATH
+          
+          # Get cluster credentials if cluster exists
+          echo "🔑 Configuring kubectl credentials for cleanup..."
+          CLUSTER_NAME="online-boutique-${{ env.ENVIRONMENT }}"
+          gcloud container clusters get-credentials "$CLUSTER_NAME" \
+            --region=${{ env.REGION }} \
+            --project=${{ env.PROJECT_ID }} || echo "⚠️ Cluster may already be deleted"
+          
+          echo "✅ kubectl and gke-gcloud-auth-plugin ready for cleanup"
+
       - name: Terraform Init
         run: terraform init
 
       - name: Terraform Destroy
         run: |
           echo "🗑️ Destroying test environment..."
-          terraform destroy -auto-approve -var="gcp_project_id=${{ env.PROJECT_ID }}"
+          terraform destroy -auto-approve \
+            -var="gcp_project_id=${{ env.PROJECT_ID }}" \
+            -var="name=online-boutique-${{ env.ENVIRONMENT }}"
           echo "✅ Test environment cleaned up"
         env:
           TF_VAR_gcp_project_id: ${{ env.PROJECT_ID }}
