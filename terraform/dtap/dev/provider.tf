@@ -29,10 +29,11 @@ provider "google-beta" {
   region  = var.region
 }
 
-# Kubernetes provider - use gke auth plugin
+# Kubernetes provider - use data source with fallbacks for better reliability
 provider "kubernetes" {
-  host                   = "https://${module.dev_kubernetes_cluster.cluster_endpoint}"
-  cluster_ca_certificate = base64decode(module.dev_kubernetes_cluster.cluster_ca_certificate)
+  host                   = try("https://${data.google_container_cluster.cluster.endpoint}", null)
+  cluster_ca_certificate = try(base64decode(data.google_container_cluster.cluster.master_auth.0.cluster_ca_certificate), null)
+  token                  = data.google_client_config.default.access_token
 
   exec {
     api_version = "client.authentication.k8s.io/v1beta1"
@@ -40,11 +41,12 @@ provider "kubernetes" {
   }
 }
 
-# Helm provider - use gke auth plugin
+# Helm provider - use data source with fallbacks for better reliability
 provider "helm" {
   kubernetes {
-    host                   = "https://${module.dev_kubernetes_cluster.cluster_endpoint}"
-    cluster_ca_certificate = base64decode(module.dev_kubernetes_cluster.cluster_ca_certificate)
+    host                   = try("https://${data.google_container_cluster.cluster.endpoint}", null)
+    cluster_ca_certificate = try(base64decode(data.google_container_cluster.cluster.master_auth.0.cluster_ca_certificate), null)
+    token                  = data.google_client_config.default.access_token
 
     exec {
       api_version = "client.authentication.k8s.io/v1beta1"
