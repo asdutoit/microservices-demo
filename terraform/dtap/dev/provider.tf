@@ -33,7 +33,7 @@ provider "google-beta" {
 provider "kubernetes" {
   host                   = "https://${module.dev_kubernetes_cluster.cluster_endpoint}"
   cluster_ca_certificate = base64decode(module.dev_kubernetes_cluster.cluster_ca_certificate)
-  
+
   exec {
     api_version = "client.authentication.k8s.io/v1beta1"
     command     = "gke-gcloud-auth-plugin"
@@ -45,7 +45,7 @@ provider "helm" {
   kubernetes {
     host                   = "https://${module.dev_kubernetes_cluster.cluster_endpoint}"
     cluster_ca_certificate = base64decode(module.dev_kubernetes_cluster.cluster_ca_certificate)
-    
+
     exec {
       api_version = "client.authentication.k8s.io/v1beta1"
       command     = "gke-gcloud-auth-plugin"

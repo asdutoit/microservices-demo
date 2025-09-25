@@ -63,7 +63,7 @@ module "dev_kubernetes_cluster" {
   rbac_teams            = var.rbac_teams
   rbac_environment      = "dev"
   platform_project_name = "online-boutique"
-  pod_readiness_timeout  = var.pod_readiness_timeout
+  pod_readiness_timeout = var.pod_readiness_timeout
   skip_pod_wait         = var.skip_pod_wait
 
   vpc_name    = module.cluster_vpc.vpc_name
