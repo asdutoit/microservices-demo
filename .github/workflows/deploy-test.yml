@@ -173,12 +173,25 @@ jobs:
           echo "Working directory: $(pwd)"
           ls -la .
 
+      - name: Pre-configure kubectl for Terraform
+        run: |
+          echo "🔑 Pre-configuring kubectl credentials for Terraform..."
+          # This ensures kubectl is ready when Terraform's null_resource runs
+          gcloud container clusters get-credentials online-boutique \
+            --region=${{ env.REGION }} \
+            --project=${{ env.PROJECT_ID }} || echo "Cluster not ready yet, will retry during Terraform"
+
       - name: Create Fresh Plan for Apply
         run: |
           echo "🔄 Creating fresh plan to avoid stale state issues..."
-          terraform plan -out=tfplan-fresh -var="gcp_project_id=${{ env.PROJECT_ID }}"
+          terraform plan -out=tfplan-fresh \
+            -var="gcp_project_id=${{ env.PROJECT_ID }}" \
+            -var="namespace=development" \
+            -var="ci_cd_mode=true"
         env:
           TF_VAR_gcp_project_id: ${{ env.PROJECT_ID }}
+          TF_VAR_namespace: development
+          TF_VAR_ci_cd_mode: true
 
       - name: Terraform Apply
         run: terraform apply -auto-approve tfplan-fresh

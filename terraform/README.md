@@ -161,6 +161,10 @@ To use the GitHub Actions workflows for automated deployment, you'll need to set
      --member="$WI_MEMBER"
    
    gcloud projects add-iam-policy-binding $PROJECT_ID \
+     --role="roles/iam.serviceAccountUser" \
+     --member="$WI_MEMBER"
+   
+   gcloud projects add-iam-policy-binding $PROJECT_ID \
      --role="roles/servicenetworking.networksAdmin" \
      --member="$WI_MEMBER"
    

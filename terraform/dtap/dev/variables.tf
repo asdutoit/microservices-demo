@@ -62,6 +62,24 @@ variable "enable_platform_rbac" {
   default     = true
 }
 
+variable "ci_cd_mode" {
+  description = <<-EOT
+    Set to true when running in CI/CD environments to disable complex features.
+    When enabled, this will:
+    - Disable platform RBAC (to avoid kubectl authentication issues)
+    - Skip application deployment (focus on infrastructure testing)
+    - Simplify deployment for automated testing
+  EOT
+  type        = bool
+  default     = false
+}
+
+variable "skip_app_deployment" {
+  description = "Skip application deployment (useful for infrastructure-only testing)"
+  type        = bool
+  default     = false
+}
+
 variable "platform_admins" {
   description = "List of users with full cluster admin access"
   type        = list(string)
