@@ -85,8 +85,8 @@ output "nginx_ingress_info" {
     service_name = "ingress-nginx-controller"
     # Note: LoadBalancer IP will be available after deployment
     # Run: kubectl get svc ingress-nginx-controller -n ingress-nginx -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
-    access_info  = "Use 'kubectl get svc ingress-nginx-controller -n ingress-nginx' to get LoadBalancer IP"
-    status       = helm_release.nginx_ingress.status
+    access_info = "Use 'kubectl get svc ingress-nginx-controller -n ingress-nginx' to get LoadBalancer IP"
+    status      = helm_release.nginx_ingress.status
   }
 }
 

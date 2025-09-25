@@ -7,8 +7,10 @@ This directory contains Terraform configurations for deploying the Google Cloud 
 ```
 terraform/
 ├── README.md                    # This file
+├── QUICK_REFERENCE.md           # Quick reference guide (to be completed)
+├── README_ARCHITECTURE.md       # Architecture overview (to be completed)
 ├── dtap/                        # Environment-specific configurations
-│   └── dev/                     # Development environment
+│   ├── dev/                     # Development environment
 │       ├── data.tf              # Data sources
 │       ├── main.tf              # Main configuration
 │       ├── output.tf            # Output values
@@ -16,10 +18,14 @@ terraform/
 │       ├── roles.tf             # IAM roles and permissions
 │       ├── state.tf             # Terraform state configuration
 │       └── variables.tf         # Variable definitions
+│   ├── test/                    # Testing environment
+│   ├── prod/                    # Production environment
+│   └── acc/                     # Acceptance environment
 └── src/                         # Reusable modules
     └── modules/
         ├── enable_google_apis/  # Module to enable required GCP APIs
         ├── kubernetes_cluster/  # GKE cluster and app deployment
+        ├── platform-rbac/       # Platform RBAC setup
         └── vpc/                 # VPC network configuration
 ```
 
@@ -29,7 +35,7 @@ Before you can deploy this infrastructure, ensure you have the following:
 
 ### Required Tools
 
-1. **Terraform** (v1.0 or later)
+1. **Terraform** (v1.5 or later)
 
    ```bash
    # Install via Homebrew (macOS)
@@ -51,29 +57,31 @@ Before you can deploy this infrastructure, ensure you have the following:
    ```
 
 3. **kubectl**
+
    ```bash
    # Install via Homebrew (macOS)
    brew install kubectl
-   
+
    # Verify installation
    kubectl version --client
    ```
 
 4. **direnv** (Optional but Recommended)
+
    ```bash
    # Install via Homebrew (macOS)
    brew install direnv
-   
+
    # Add to your shell (choose one)
    # For zsh (add to ~/.zshrc)
    echo 'eval "$(direnv hook zsh)"' >> ~/.zshrc
-   
+
    # For bash (add to ~/.bashrc or ~/.bash_profile)
    echo 'eval "$(direnv hook bash)"' >> ~/.bashrc
-   
+
    # Restart your shell or source the config
    source ~/.zshrc  # or ~/.bashrc
-   
+
    # Verify installation
    direnv version
    ```
@@ -104,17 +112,142 @@ Before you can deploy this infrastructure, ensure you have the following:
    - `Compute Network Admin`
    - `Service Account Admin`
    - `Project IAM Admin`
+   - `Service Usage Admin` (for enabling APIs)
+
+### GitHub Actions CI/CD Setup (Optional)
+
+To use the GitHub Actions workflows for automated deployment, you'll need to set up Workload Identity Federation:
+
+1. **Create a Workload Identity Pool**
+
+   ```bash
+   # Set your project variables
+   export PROJECT_ID="your-project-id"
+   export PROJECT_NUMBER=$(gcloud projects describe $PROJECT_ID --format="value(projectNumber)")
+
+   # Create workload identity pool
+   gcloud iam workload-identity-pools create "github-actions-pool" \
+     --project="$PROJECT_ID" \
+     --location="global" \
+     --display-name="GitHub Actions Pool"
+
+   # Create OIDC provider
+   gcloud iam workload-identity-pools providers create-oidc "github-provider" \
+     --project="$PROJECT_ID" \
+     --location="global" \
+     --workload-identity-pool="github-actions-pool" \
+     --display-name="GitHub Provider" \
+     --attribute-mapping="google.subject=assertion.sub,attribute.repository=assertion.repository" \
+     --issuer-uri="https://token.actions.githubusercontent.com"
+   ```
+
+2. **Grant Required Permissions**
+
+   ```bash
+   # Define the workload identity pool member
+   export WI_MEMBER="principalSet://iam.googleapis.com/projects/$PROJECT_NUMBER/locations/global/workloadIdentityPools/github-actions-pool/attribute.repository/your-username/microservices-demo"
+
+   # Grant essential roles for Terraform deployment
+   gcloud projects add-iam-policy-binding $PROJECT_ID \
+     --role="roles/serviceusage.serviceUsageAdmin" \
+     --member="$WI_MEMBER"
+
+   gcloud projects add-iam-policy-binding $PROJECT_ID \
+     --role="roles/container.admin" \
+     --member="$WI_MEMBER"
+
+   gcloud projects add-iam-policy-binding $PROJECT_ID \
+     --role="roles/compute.admin" \
+     --member="$WI_MEMBER"
+
+   gcloud projects add-iam-policy-binding $PROJECT_ID \
+     --role="roles/iam.serviceAccountAdmin" \
+     --member="$WI_MEMBER"
+
+   gcloud projects add-iam-policy-binding $PROJECT_ID \
+     --role="roles/iam.serviceAccountUser" \
+     --member="$WI_MEMBER"
+
+   gcloud projects add-iam-policy-binding $PROJECT_ID \
+     --role="roles/servicenetworking.networksAdmin" \
+     --member="$WI_MEMBER"
+
+   # Grant storage permissions for Terraform state
+   gcloud storage buckets add-iam-policy-binding "gs://your-terraform-state-bucket" \
+     --role="roles/storage.objectAdmin" \
+     --member="$WI_MEMBER"
+   ```
+
+3. **Configure GitHub Repository Secrets**
+
+   Go to your GitHub repository → Settings → Secrets and variables → Actions, and add:
+
+   ```
+   GCP_WI_PROVIDER: projects/PROJECT_NUMBER/locations/global/workloadIdentityPools/github-actions-pool/providers/github-provider
+   ```
+
+   Replace `PROJECT_NUMBER` with your actual project number.
+
+4. **Test the Setup**
+
+   ```bash
+   # Verify workload identity pool exists
+   gcloud iam workload-identity-pools list --location=global --project=$PROJECT_ID
+
+   # Check permissions (replace with your actual member)
+   gcloud projects get-iam-policy $PROJECT_ID \
+     --flatten="bindings[].members" \
+     --format="table(bindings.role)" \
+     --filter="bindings.members:$WI_MEMBER"
+   ```
+
+   **📖 Reference**: [Google GitHub Actions Auth Documentation](https://github.com/google-github-actions/auth?tab=readme-ov-file#preferred-direct-workload-identity-federation)
 
 ## 🚀 Getting Started
 
 ### Step 1: Clone and Navigate
 
 ```bash
-git clone https://github.com/asdutoit/microservices-demo.git
-cd /path/to/microservices-demo/terraform/dtap/dev
+git clone https://github.com/your-org/microservices-demo.git
+cd microservices-demo/terraform/dtap/dev
 ```
 
-### Step 2: Configure Variables
+### Step 2: Configure Terraform State Backend
+
+**Important**: Before running Terraform, you need to configure the backend state storage.
+
+1. **Create a Cloud Storage bucket** for Terraform state:
+
+   ```bash
+   # Create a unique bucket name (replace with your own)
+   export BUCKET_NAME="your-project-id-terraform-state"
+
+   # Create the bucket
+   gsutil mb gs://$BUCKET_NAME
+
+   # Enable versioning for state backup
+   gsutil versioning set on gs://$BUCKET_NAME
+   ```
+
+2. **Update the state.tf file** with your bucket name:
+
+   ```bash
+   # Edit the state.tf file
+   code state.tf  # (or "vi" if your a psychopath)
+   ```
+
+   Update the bucket name in `state.tf`:
+
+   ```hcl
+   terraform {
+     backend "gcs" {
+       bucket = "your-project-id-terraform-state"  # Change this!
+       prefix = "terraform/state/dev"
+     }
+   }
+   ```
+
+### Step 3: Configure Variables
 
 You have several options to configure your variables:
 
@@ -124,7 +257,7 @@ If you installed direnv, you can use the provided `.envrc` files:
 
 ```bash
 # Navigate to the project root
-cd /path/to/microservices-demo
+cd microservices-demo
 
 # Copy the sample file and customize with your project details
 cp .envrc.sample .envrc
@@ -154,7 +287,7 @@ echo 'gcp_project_id = "your-project-id"' > terraform.tfvars
 export TF_VAR_gcp_project_id="your-project-id"
 ```
 
-### Step 3: Initialize Terraform
+### Step 4: Initialize Terraform
 
 ```bash
 terraform init
@@ -166,7 +299,7 @@ This will:
 - Initialize the backend
 - Download modules
 
-### Step 4: Plan the Deployment
+### Step 5: Plan the Deployment
 
 ```bash
 terraform plan
@@ -174,7 +307,15 @@ terraform plan
 
 Review the planned changes to ensure everything looks correct.
 
-### Step 5: Deploy the Infrastructure
+### Step 6: Deploy the Infrastructure
+
+#### Option 1: Deploy using the bash script
+
+```bash
+./deploy_cluster.sh
+```
+
+#### Option 2: Deploy using Terraform CLI
 
 ```bash
 terraform apply
@@ -189,6 +330,39 @@ Type `yes` when prompted. This will:
 - Wait for all pods to be ready
 
 ⏱️ **Note**: Initial deployment takes approximately 10-15 minutes.
+
+### CI/CD Deployment
+
+For GitHub Actions or other CI/CD environments, use these variables to optimize deployment:
+
+```bash
+# Skip pod readiness checks (recommended for CI/CD)
+terraform apply -var="skip_pod_wait=true"
+
+# Or set via environment variable
+export TF_VAR_skip_pod_wait=true
+terraform apply
+```
+
+This approach:
+
+- ✅ Focuses on infrastructure provisioning
+- ✅ Avoids CI/CD timeout issues
+- ✅ Lets platform teams verify pod health manually
+- ✅ Reduces deployment time in automated environments
+
+**Manual verification after CI/CD deployment:**
+
+```bash
+# Connect to cluster
+gcloud container clusters get-credentials CLUSTER_NAME --region REGION --project PROJECT_ID
+
+# Check pod status
+kubectl get pods -n NAMESPACE
+
+# Wait for pods manually if needed
+kubectl wait --for=condition=ready pods --all -n NAMESPACE --timeout=900s
+```
 
 ## 🔌 Connecting to Your Cluster
 
@@ -231,13 +405,15 @@ kubectl get pods
 
 ### Environment Variables
 
-| Variable         | Description                      | Default           |
-| ---------------- | -------------------------------- | ----------------- |
-| `gcp_project_id` | GCP Project ID                   | _Required_        |
-| `name`           | Cluster and resource name prefix | `online-boutique` |
-| `region`         | GCP region for deployment        | `us-central1`     |
-| `namespace`      | Kubernetes namespace             | `default`         |
-| `memorystore`    | Enable Cloud Memorystore Redis   | `false`           |
+| Variable                | Description                         | Default           |
+| ----------------------- | ----------------------------------- | ----------------- |
+| `gcp_project_id`        | GCP Project ID                      | _Required_        |
+| `name`                  | Cluster and resource name prefix    | `online-boutique` |
+| `region`                | GCP region for deployment           | `us-central1`     |
+| `namespace`             | Kubernetes namespace                | `default`         |
+| `memorystore`           | Enable Cloud Memorystore Redis      | `false`           |
+| `skip_pod_wait`         | Skip waiting for pods (CI/CD mode)  | `false`           |
+| `pod_readiness_timeout` | Timeout for pod readiness (seconds) | `900`             |
 
 ### Using direnv for Environment Management
 
@@ -249,6 +425,7 @@ kubectl get pods
 - Configure gcloud CLI defaults
 
 **Benefits of using direnv:**
+
 - ✅ Automatic environment switching per directory
 - ✅ No need to remember to export variables
 - ✅ Consistent configuration across team members
@@ -256,6 +433,7 @@ kubectl get pods
 - ✅ Prevents accidentally deploying to wrong projects
 
 **Usage:**
+
 ```bash
 # Copy the sample file and customize
 cp .envrc.sample .envrc
@@ -347,13 +525,6 @@ The infrastructure follows Google Cloud best practices:
 - Security policies and network isolation
 - Resource optimization
 
-## 📚 Additional Resources
+## 📖 Quick Reference
 
-- [Online Boutique Documentation](../README.md)
-- [GKE Autopilot Documentation](https://cloud.google.com/kubernetes-engine/docs/concepts/autopilot-overview)
-- [Terraform GCP Provider](https://registry.terraform.io/providers/hashicorp/google/latest/docs)
-- [kubectl Cheat Sheet](https://kubernetes.io/docs/reference/kubectl/cheatsheet/)
-
----
-
-**Happy deploying!** 🎉
+To be completed.

@@ -5,6 +5,7 @@
 ### Initial Setup
 
 #### With direnv (Recommended)
+
 ```bash
 # Navigate to project root
 cd /path/to/microservices-demo
@@ -24,6 +25,7 @@ terraform init
 ```
 
 #### Without direnv
+
 ```bash
 # Navigate to environment
 cd terraform/dtap/dev
@@ -36,6 +38,7 @@ terraform init
 ```
 
 ### Deploy & Manage
+
 ```bash
 # Plan changes
 terraform plan
@@ -48,6 +51,7 @@ terraform destroy
 ```
 
 ### Connect to Cluster
+
 ```bash
 # Get connection command
 terraform output -raw kubectl_context_command
@@ -64,6 +68,7 @@ kubectl get pods
 ```
 
 ### Useful Outputs
+
 ```bash
 # All outputs
 terraform output
@@ -75,6 +80,7 @@ terraform output connect_instructions
 ```
 
 ### Troubleshooting
+
 ```bash
 # Refresh state
 terraform refresh
@@ -90,6 +96,7 @@ terraform show
 ```
 
 ### direnv Commands
+
 ```bash
 # Allow direnv in current directory
 direnv allow .
@@ -109,6 +116,7 @@ direnv exec . env  # Show environment direnv would load
 ```
 
 ### GCP Authentication
+
 ```bash
 # Login to GCP
 gcloud auth login
@@ -124,6 +132,7 @@ gcloud config list
 ```
 
 ### Kubectl Basics
+
 ```bash
 # Get cluster info
 kubectl cluster-info
@@ -143,6 +152,7 @@ kubectl get ingress
 ## 🔧 Configuration Files
 
 ### .envrc (Recommended - using direnv)
+
 ```bash
 # Copy the sample and customize
 cp .envrc.sample .envrc
@@ -159,6 +169,7 @@ gcloud config set compute/region $REGION
 ```
 
 ### terraform.tfvars (Alternative)
+
 ```hcl
 gcp_project_id = "your-project-id"
 name           = "online-boutique"
@@ -168,6 +179,7 @@ memorystore    = false
 ```
 
 ### Environment Variables (Manual)
+
 ```bash
 export TF_VAR_gcp_project_id="your-project-id"
 export TF_VAR_region="us-central1"
@@ -177,7 +189,7 @@ export TF_VAR_name="online-boutique"
 ## ⏱️ Typical Deployment Timeline
 
 1. **terraform init**: ~30 seconds
-2. **terraform plan**: ~30 seconds  
+2. **terraform plan**: ~30 seconds
 3. **terraform apply**: ~10-15 minutes
 4. **kubectl connection**: ~5 seconds
 5. **terraform destroy**: ~5-10 minutes
@@ -185,6 +197,7 @@ export TF_VAR_name="online-boutique"
 ## 🎯 Quick Deploy
 
 ### With direnv (Recommended)
+
 ```bash
 # From project root with .envrc configured
 cd terraform/dtap/dev && \
@@ -192,7 +205,17 @@ terraform init && \
 terraform apply -auto-approve
 ```
 
+or
+
+```bash
+cd terraform/dtap/dev && \
+direnv allow . && \
+terraform init && \
+./deploy_cluster.sh
+```
+
 ### Without direnv
+
 ```bash
 cd terraform/dtap/dev && \
 export TF_VAR_gcp_project_id="your-project-id" && \
@@ -201,6 +224,7 @@ terraform apply -auto-approve
 ```
 
 ## 🧹 Quick Cleanup
+
 ```bash
 cd terraform/dtap/dev && terraform destroy -auto-approve
 ```

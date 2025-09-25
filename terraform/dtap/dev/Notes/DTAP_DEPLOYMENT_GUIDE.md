@@ -24,18 +24,18 @@ Our DTAP pipeline uses a **multi-project approach** for maximum security and iso
 📁 GCP Projects Structure
 ├── gcp-training-329013 (Development)
 ├── company-test-project (Test)
-├── company-acc-project (Acceptance)  
+├── company-acc-project (Acceptance)
 └── company-prod-project (Production)
 ```
 
 ### Environment Characteristics
 
-| Environment | Trigger | Approval | Purpose | Isolation Level |
-|-------------|---------|----------|---------|-----------------|
-| **Dev** | Manual/Local | None | Local development | Single project |
-| **Test** | PR to main | Automatic | Feature testing | Dedicated project |
-| **Acceptance** | Push to main | Manual | User acceptance | Dedicated project |
-| **Production** | Release workflow | Manual + Stakeholders | Live system | Dedicated project |
+| Environment    | Trigger          | Approval              | Purpose           | Isolation Level   |
+| -------------- | ---------------- | --------------------- | ----------------- | ----------------- |
+| **Dev**        | Manual/Local     | None                  | Local development | Single project    |
+| **Test**       | PR to main       | Automatic             | Feature testing   | Dedicated project |
+| **Acceptance** | Push to main     | Manual                | User acceptance   | Dedicated project |
+| **Production** | Release workflow | Manual + Stakeholders | Live system       | Dedicated project |
 
 ## 🚀 Environment Setup
 
@@ -56,7 +56,7 @@ GCP_DEV_SA_KEY          # Service account key for dev deployments
 GCP_TEST_SA_KEY         # Service account key for test deployments
 TEST_PROJECT_ID         # GCP project ID for test
 
-# Acceptance Environment  
+# Acceptance Environment
 GCP_ACC_SA_KEY          # Service account key for acceptance deployments
 ACC_PROJECT_ID          # GCP project ID for acceptance
 
@@ -66,7 +66,7 @@ PROD_PROJECT_ID         # GCP project ID for production
 
 # Notification Webhooks (optional)
 SLACK_WEBHOOK_URL       # Slack webhook for notifications
-PAGERDUTY_TOKEN         # PagerDuty API token for alerts
+# Need to finish setup/config and test....
 ```
 
 ### Service Account IAM Roles
@@ -99,6 +99,7 @@ roles/binaryauthorization.attestorsAdmin
 **Trigger**: Pull request to `main` branch
 
 **Flow**:
+
 ```mermaid
 graph LR
     A[PR Created] --> B[Security Scans]
@@ -109,6 +110,7 @@ graph LR
 ```
 
 **Features**:
+
 - ✅ Automatic deployment on PR creation
 - ✅ Security scanning with Trivy
 - ✅ Terraform plan and apply
@@ -121,6 +123,7 @@ graph LR
 **Trigger**: Push to `main` branch (merged PR)
 
 **Flow**:
+
 ```mermaid
 graph LR
     A[PR Merged] --> B[Deploy to Acceptance]
@@ -131,6 +134,7 @@ graph LR
 ```
 
 **Features**:
+
 - ✅ Deployment on successful merge to main
 - ✅ Comprehensive testing suite
 - ✅ Performance validation
@@ -143,6 +147,7 @@ graph LR
 **Trigger**: Manual workflow dispatch with release tag
 
 **Flow**:
+
 ```mermaid
 graph LR
     A[Manual Trigger] --> B[Pre-deploy Validation]
@@ -154,6 +159,7 @@ graph LR
 ```
 
 **Features**:
+
 - ✅ Manual trigger with required approvals
 - ✅ Pre-deployment validation
 - ✅ Production backup before deployment
@@ -175,7 +181,7 @@ protection_rules:
       - team:platform-team
       - team:security-team
   - type: wait_timer
-    wait_timer: 5  # 5 minutes
+    wait_timer: 5 # 5 minutes
 ```
 
 ### Network Security
@@ -211,12 +217,14 @@ terraform apply -auto-approve
 ### Test Environment Workflow
 
 1. **Create Feature Branch**:
+
    ```bash
    git checkout -b feature/new-functionality
    git push origin feature/new-functionality
    ```
 
 2. **Open Pull Request**:
+
    - GitHub Actions automatically deploys to test environment
    - Runs security scans and integration tests
    - Provides feedback on PR
@@ -229,11 +237,13 @@ terraform apply -auto-approve
 ### Production Deployment
 
 1. **Navigate to GitHub Actions**:
+
    ```
    Repository → Actions → "🏭 Deploy to Production Environment"
    ```
 
 2. **Fill Required Information**:
+
    ```
    Release Tag: v1.2.3
    Maintenance Window: 2024-01-15 02:00 UTC
@@ -272,7 +282,7 @@ kubectl get pods -n ingress-nginx
 Production environment includes comprehensive monitoring:
 
 - **Prometheus**: Metrics collection and alerting
-- **Grafana**: Visualization dashboards  
+- **Grafana**: Visualization dashboards
 - **AlertManager**: Alert routing and escalation
 - **Fluent Bit**: Log aggregation to Cloud Logging
 - **ArgoCD**: GitOps deployment monitoring
@@ -307,18 +317,18 @@ terraform {
 Resource Format: {service}-{environment}-{resource-type}
 Examples:
 - online-boutique-prod-vpc
-- online-boutique-test-cluster  
+- online-boutique-test-cluster
 - online-boutique-acc-subnet
 ```
 
 ### Cost Optimization
 
-| Environment | Cost Optimization Strategy |
-|-------------|----------------------------|
-| **Dev** | Preemptible nodes, auto-shutdown |
-| **Test** | Ephemeral (created/destroyed per PR) |
+| Environment    | Cost Optimization Strategy                |
+| -------------- | ----------------------------------------- |
+| **Dev**        | Preemptible nodes, auto-shutdown          |
+| **Test**       | Ephemeral (created/destroyed per PR)      |
 | **Acceptance** | Scheduled shutdown outside business hours |
-| **Production** | Right-sized instances, autoscaling |
+| **Production** | Right-sized instances, autoscaling        |
 
 ## 🔧 Troubleshooting
 
@@ -376,12 +386,12 @@ argocd app rollback online-boutique --revision <previous-revision>
 
 ### Escalation Matrix
 
-| Level | Contact | Response Time |
-|-------|---------|---------------|
-| L1 | Platform Team | 15 minutes |
-| L2 | Senior DevOps | 30 minutes |
-| L3 | Architecture Team | 1 hour |
-| L4 | CTO Office | 2 hours |
+| Level | Contact           | Response Time |
+| ----- | ----------------- | ------------- |
+| L1    | Platform Team     | 15 minutes    |
+| L2    | Senior DevOps     | 30 minutes    |
+| L3    | Architecture Team | 1 hour        |
+| L4    | CTO Office        | 2 hours       |
 
 ### Documentation Links
 
@@ -402,11 +412,11 @@ This DTAP pipeline provides:
 ✅ **Comprehensive monitoring** and observability  
 ✅ **Zero-downtime deployments** for production  
 ✅ **Cost optimization** across all environments  
-✅ **Full GitOps workflow** with ArgoCD integration  
+✅ **Full GitOps workflow** with ArgoCD integration
 
 The pipeline scales from development to production while maintaining security, compliance, and operational excellence standards suitable for enterprise environments.
 
 ---
 
-*Last updated: January 2024*  
-*Version: 1.0*
+_Last updated: January 2024_  
+_Version: 1.0_

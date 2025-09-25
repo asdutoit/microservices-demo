@@ -21,7 +21,7 @@ NC='\033[0m' # No Color
 
 # Configuration
 PROJECT_ID="gcp-training-329013"
-CLUSTER_NAME="online-boutique-dev"
+CLUSTER_NAME="online-boutique"
 REGION="europe-west4"
 
 # Logging functions

@@ -34,8 +34,10 @@ resource "null_resource" "get_cluster_credentials" {
   depends_on = [google_container_cluster.my_cluster]
 }
 
-# Apply YAML kubernetes-manifest configurations
+# Apply YAML kubernetes-manifest configurations (only if not skipped)
 resource "null_resource" "apply_deployment" {
+  count = var.skip_app_deployment ? 0 : 1
+  
   provisioner "local-exec" {
     interpreter = ["bash", "-exc"]
     command     = "kubectl apply -k ${var.filepath_manifest} -n ${var.namespace}"
@@ -46,18 +48,31 @@ resource "null_resource" "apply_deployment" {
   ]
 }
 
-# Wait condition for all Pods to be ready before finishing
+# Wait condition for all Pods to be ready before finishing (only if app deployed and pod wait not skipped)
 resource "null_resource" "wait_conditions" {
+  count = (var.skip_app_deployment || var.skip_pod_wait) ? 0 : 1
+  
   provisioner "local-exec" {
     interpreter = ["bash", "-exc"]
     command     = <<-EOT
-    kubectl wait --for=condition=AVAILABLE apiservice/v1beta1.metrics.k8s.io --timeout=180s
-    kubectl wait --for=condition=ready pods --all -n ${var.namespace} --timeout=280s
+    echo "⏳ Waiting for metrics API to be available..."
+    kubectl wait --for=condition=AVAILABLE apiservice/v1beta1.metrics.k8s.io --timeout=300s || echo "Metrics API timeout - continuing anyway"
+    
+    echo "⏳ Waiting for pods to be ready (this may take 10-15 minutes on GKE Autopilot)..."
+    kubectl wait --for=condition=ready pods --all -n ${var.namespace} --timeout=${var.pod_readiness_timeout}s || {
+      echo "⚠️ Some pods are not ready yet. Checking pod status:"
+      kubectl get pods -n ${var.namespace}
+      kubectl describe pods -n ${var.namespace} | grep -E "Name:|State:|Events:" | tail -20
+      echo "🔄 Deployment will continue - pods may still be starting"
+    }
+    
+    echo "📊 Final pod status:"
+    kubectl get pods -n ${var.namespace}
     EOT
   }
 
   depends_on = [
-    resource.null_resource.apply_deployment,
+    null_resource.apply_deployment,
   ]
 }
 

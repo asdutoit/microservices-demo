@@ -12,7 +12,7 @@ variable "name" {
 variable "region" {
   type        = string
   description = "Region of the new GKE cluster"
-  default     = "us-central1"
+  default     = "europe-west4"
 }
 
 variable "namespace" {
@@ -62,6 +62,24 @@ variable "enable_platform_rbac" {
   default     = true
 }
 
+variable "ci_cd_mode" {
+  description = <<-EOT
+    Set to true when running in CI/CD environments to disable complex features.
+    When enabled, this will:
+    - Disable platform RBAC (to avoid kubectl authentication issues)
+    - Skip application deployment (focus on infrastructure testing)
+    - Simplify deployment for automated testing
+  EOT
+  type        = bool
+  default     = false
+}
+
+variable "skip_app_deployment" {
+  description = "Skip application deployment (useful for infrastructure-only testing)"
+  type        = bool
+  default     = false
+}
+
 variable "platform_admins" {
   description = "List of users with full cluster admin access"
   type        = list(string)
@@ -90,11 +108,11 @@ variable "rbac_teams" {
     members      = list(string) # List of team member emails
     contacts     = list(string) # Additional contact emails
     cost_center  = optional(string, "")
-    
+
     # Optional cross-namespace access
     additional_namespace_access = optional(list(string), [])
   }))
-  
+
   default = {
     # Example team configuration - customize as needed
     developers = {
@@ -107,4 +125,16 @@ variable "rbac_teams" {
       cost_center  = "engineering"
     }
   }
+}
+
+variable "pod_readiness_timeout" {
+  description = "Timeout in seconds to wait for pods to be ready. Increase for GKE Autopilot or CI/CD environments."
+  type        = number
+  default     = 900
+}
+
+variable "skip_pod_wait" {
+  description = "Skip waiting for pods to be ready. Set to true in CI/CD environments to avoid timeouts."
+  type        = bool
+  default     = false
 }

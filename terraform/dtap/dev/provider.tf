@@ -29,17 +29,20 @@ provider "google-beta" {
   region  = var.region
 }
 
+# Kubernetes provider - use kubectl config-based authentication
+# This relies on kubectl being properly configured by the cluster module
 provider "kubernetes" {
-  host                   = "https://${module.dev_kubernetes_cluster.cluster_endpoint}"
-  cluster_ca_certificate = base64decode(module.dev_kubernetes_cluster.cluster_ca_certificate)
-  token                  = data.google_client_config.default.access_token
+  # Don't specify host/token - let it use kubectl config
+  # The kubernetes_cluster module configures kubectl via null_resource
+  config_path = "~/.kube/config"
 }
 
+# Helm provider - use kubectl config-based authentication
 provider "helm" {
   kubernetes {
-    host                   = "https://${module.dev_kubernetes_cluster.cluster_endpoint}"
-    cluster_ca_certificate = base64decode(module.dev_kubernetes_cluster.cluster_ca_certificate)
-    token                  = data.google_client_config.default.access_token
+    # Don't specify host/token - let it use kubectl config
+    # The kubernetes_cluster module configures kubectl via null_resource
+    config_path = "~/.kube/config"
   }
 }
 

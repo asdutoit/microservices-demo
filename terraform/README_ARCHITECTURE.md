@@ -3,6 +3,7 @@
 This document outlines the architecture decisions and implementation patterns for a production-grade DTAP (Development, Testing, Acceptance, Production) environment on Google Cloud Platform with Kubernetes.
 
 ## 📋 Table of Contents
+
 - [Architecture Overview](#architecture-overview)
 - [Environment Separation Strategies](#environment-separation-strategies)
 - [Recommended Architecture](#recommended-architecture)
@@ -14,7 +15,9 @@ This document outlines the architecture decisions and implementation patterns fo
 ## 🏗️ Architecture Overview
 
 ### **Current Implementation**
+
 This project demonstrates **enterprise-grade multi-project DTAP architecture** with:
+
 - ✅ **Production Project**: `gcp-training-329013` (actual)
 - 📋 **Staging Projects**: Placeholder configurations for test/acc/prod
 - 🚀 **Full CI/CD Pipeline**: GitHub Actions with environment promotions
@@ -23,21 +26,24 @@ This project demonstrates **enterprise-grade multi-project DTAP architecture** w
 ## 🎯 Environment Separation Strategies
 
 ### **Option 1: Single Cluster, Multi-Namespace** ❌
+
 ```
 gcp-project-12345
 └── single-gke-cluster
     ├── dev-namespace
-    ├── test-namespace  
+    ├── test-namespace
     ├── acc-namespace
     └── prod-namespace
 ```
 
 **Pros:**
+
 - ✅ Lowest cost (single cluster)
 - ✅ Simple management
 - ✅ Shared resources efficiency
 
 **Cons:**
+
 - ❌ **Poor security isolation**
 - ❌ **High blast radius** (cluster failure affects all environments)
 - ❌ **Resource contention** between environments
@@ -45,6 +51,7 @@ gcp-project-12345
 - ❌ **No environment-specific networking**
 
 ### **Option 2: Multi-Cluster, Single Project** ⚠️
+
 ```
 gcp-project-12345
 ├── dev-gke-cluster
@@ -54,12 +61,14 @@ gcp-project-12345
 ```
 
 **Pros:**
+
 - ✅ Better isolation than namespaces
 - ✅ Independent cluster scaling
 - ✅ Moderate cost (shared project resources)
 - ✅ Environment-specific cluster configurations
 
 **Cons:**
+
 - ⚠️ **Shared IAM policies** across environments
 - ⚠️ **Common service accounts** create security risks
 - ⚠️ **Shared networking** (VPCs, subnets)
@@ -67,14 +76,16 @@ gcp-project-12345
 - ⚠️ **Compliance gaps** for regulated workloads
 
 ### **Option 3: Multi-Project Architecture** ✅ **RECOMMENDED**
+
 ```
 ├── company-dev-project      → dev-gke-cluster
-├── company-test-project     → test-gke-cluster  
+├── company-test-project     → test-gke-cluster
 ├── company-acc-project      → acc-gke-cluster
 └── company-prod-project     → prod-gke-cluster
 ```
 
 **Pros:**
+
 - ✅ **Complete security isolation**
 - ✅ **Independent IAM policies** per environment
 - ✅ **Separate networking** (VPCs, firewall rules, DNS)
@@ -85,6 +96,7 @@ gcp-project-12345
 - ✅ **Audit trail separation**
 
 **Cons:**
+
 - ❌ **Higher operational complexity**
 - ❌ **Increased costs** (multiple clusters)
 - ❌ **More Terraform state management**
@@ -101,35 +113,35 @@ graph TB
         B[Terraform Configs]
         C[K8s Manifests]
     end
-    
+
     subgraph "Dev Environment"
         D[company-dev-project]
         D1[dev-gke-cluster]
         D2[dev-vpc-network]
         D3[dev-specific-resources]
     end
-    
-    subgraph "Test Environment"  
+
+    subgraph "Test Environment"
         E[company-test-project]
         E1[test-gke-cluster]
         E2[test-vpc-network]
         E3[test-specific-resources]
     end
-    
+
     subgraph "Acceptance Environment"
         F[company-acc-project]
         F1[acc-gke-cluster]
         F2[acc-vpc-network]
         F3[acc-specific-resources]
     end
-    
+
     subgraph "Production Environment"
         G[company-prod-project]
         G1[prod-gke-cluster]
         G2[prod-vpc-network]
         G3[prod-specific-resources]
     end
-    
+
     A --> D
     A --> E
     A --> F
@@ -139,15 +151,19 @@ graph TB
 ## 🛡️ Security & Compliance
 
 ### **Security Boundaries**
-| Aspect | Multi-Namespace | Multi-Cluster | Multi-Project |
-|--------|-----------------|---------------|---------------|
-| **Network Isolation** | ❌ Shared | ⚠️ Limited | ✅ Complete |
-| **IAM Separation** | ❌ None | ⚠️ Partial | ✅ Full |
-| **Resource Isolation** | ❌ Weak | ⚠️ Good | ✅ Strong |
-| **Audit Separation** | ❌ Mixed | ⚠️ Partial | ✅ Complete |
-| **Compliance Ready** | ❌ No | ⚠️ Limited | ✅ Yes |
 
-### **Compliance Benefits**
+| Aspect                 | Multi-Namespace | Multi-Cluster | Multi-Project |
+| ---------------------- | --------------- | ------------- | ------------- |
+| **Network Isolation**  | ❌ Shared       | ⚠️ Limited    | ✅ Complete   |
+| **IAM Separation**     | ❌ None         | ⚠️ Partial    | ✅ Full       |
+| **Resource Isolation** | ❌ Weak         | ⚠️ Good       | ✅ Strong     |
+| **Audit Separation**   | ❌ Mixed        | ⚠️ Partial    | ✅ Complete   |
+| **Compliance Ready**   | ❌ No           | ⚠️ Limited    | ✅ Yes        |
+
+### **Compliance Benefits - NOT VERIFIED, SHOULD BE CONFIRMED**
+
+> Below are potential compliance benefits of multi-project architecture:
+
 - **SOC 2 Type II**: Complete audit trail separation
 - **PCI-DSS**: Network and data isolation
 - **HIPAA**: PHI data segregation
@@ -155,36 +171,40 @@ graph TB
 - **GDPR**: Data residency and processing boundaries
 
 ### **Security Hardening**
+
 ```yaml
 Per-Project Security Features:
-- Dedicated service accounts per environment
-- Environment-specific VPC networks and subnets
-- Isolated firewall rules and security policies
-- Separate Cloud KMS keys for encryption
-- Independent backup and disaster recovery
-- Environment-scoped monitoring and alerting
+  - Dedicated service accounts per environment
+  - Environment-specific VPC networks and subnets
+  - Isolated firewall rules and security policies
+  - Separate Cloud KMS keys for encryption
+  - Independent backup and disaster recovery
+  - Environment-scoped monitoring and alerting
 ```
 
 ## 🚀 CI/CD Pipeline Design
 
 ### **Deployment Flow**
+
 ```mermaid
 graph LR
     A[Developer] -->|Local Deploy| B[Dev Environment]
-    C[Feature Branch] -->|Auto Deploy| D[Test Environment]  
+    C[Feature Branch] -->|Auto Deploy| D[Test Environment]
     E[Main Branch] -->|Auto Deploy| F[Acc Environment]
     G[Release Tag] -->|Manual Approval| H[Prod Environment]
 ```
 
 ### **Environment Promotion Strategy**
-| Environment | Trigger | Approval | Deploy Method |
-|-------------|---------|----------|---------------|
-| **Development** | Local push | None | Direct (./deploy_cluster.sh) |
-| **Test** | Feature branch PR | None | GitHub Actions |
-| **Acceptance** | Merge to main | None | GitHub Actions |
-| **Production** | Release creation | Manual | GitHub Actions + Approval |
+
+| Environment     | Trigger           | Approval | Deploy Method                |
+| --------------- | ----------------- | -------- | ---------------------------- |
+| **Development** | Local push        | None     | Direct (./deploy_cluster.sh) |
+| **Test**        | Feature branch PR | None     | GitHub Actions               |
+| **Acceptance**  | Merge to main     | None     | GitHub Actions               |
+| **Production**  | Release creation  | Manual   | GitHub Actions + Approval    |
 
 ### **Security Gates**
+
 - **Branch Protection Rules** for main branch
 - **Required PR Reviews** for all changes
 - **Status Checks** must pass before merge
@@ -203,13 +223,13 @@ terraform/
 │   │   ├── variables.tf            # Dev-specific variables
 │   │   ├── terraform.tfvars        # Dev values
 │   │   └── deploy_cluster.sh       # Local deployment script
-│   ├── test/                       # Test environment  
+│   ├── test/                       # Test environment
 │   │   ├── main.tf                 # Test configuration
 │   │   ├── variables.tf            # Test-specific variables
 │   │   └── terraform.tfvars        # Test values
 │   ├── acc/                        # Acceptance environment
 │   │   ├── main.tf                 # Acc configuration
-│   │   ├── variables.tf            # Acc-specific variables  
+│   │   ├── variables.tf            # Acc-specific variables
 │   │   └── terraform.tfvars        # Acc values
 │   └── prod/                       # Production environment
 │       ├── main.tf                 # Prod configuration
@@ -222,7 +242,9 @@ terraform/
 ## 🔧 Implementation Details
 
 ### **Per-Environment Configuration**
+
 Each environment maintains:
+
 - **Independent Terraform State**: Prevents cross-environment impacts
 - **Environment-Specific Variables**: Project IDs, regions, sizing
 - **Dedicated Service Accounts**: Scoped permissions per environment
@@ -230,16 +252,18 @@ Each environment maintains:
 - **Environment Tags**: For cost allocation and resource management
 
 ### **Cost Management**
+
 ```yaml
 Cost Optimization Strategies:
-- GKE Autopilot: Pay only for running pod resources
-- Environment-specific node pools: Right-sized for workload
-- Scheduled scaling: Scale down non-prod during off-hours
-- Resource quotas: Prevent runaway costs per environment
-- Budget alerts: Monitoring and cost controls per project
+  - GKE Autopilot: Pay only for running pod resources
+  - Environment-specific node pools: Right-sized for workload
+  - Scheduled scaling: Scale down non-prod during off-hours
+  - Resource quotas: Prevent runaway costs per environment
+  - Budget alerts: Monitoring and cost controls per project
 ```
 
 ### **Disaster Recovery**
+
 - **Cross-Region Backups**: For production environments
 - **Infrastructure as Code**: Complete environment recreation
 - **Blue/Green Deployments**: Zero-downtime production updates
@@ -249,6 +273,7 @@ Cost Optimization Strategies:
 ## 📋 Current Project Status
 
 ### **Active Environment**
+
 - **Development**: `gcp-training-329013` (fully functional)
   - GKE Autopilot cluster
   - ArgoCD + Argo Rollouts
@@ -257,8 +282,9 @@ Cost Optimization Strategies:
   - Platform RBAC with team management
 
 ### **Planned Environments** (Placeholder Configurations)
+
 - **Test**: `company-test-project` (configuration ready)
-- **Acceptance**: `company-acc-project` (configuration ready)  
+- **Acceptance**: `company-acc-project` (configuration ready)
 - **Production**: `company-prod-project` (configuration ready)
 
 ## 🎯 Benefits for Advanced Engineers
@@ -266,6 +292,7 @@ Cost Optimization Strategies:
 This architecture demonstrates:
 
 ### **Enterprise Patterns**
+
 - **Multi-tenancy** with proper isolation
 - **GitOps workflows** with ArgoCD integration
 - **Infrastructure as Code** with Terraform
@@ -273,6 +300,7 @@ This architecture demonstrates:
 - **Observability** with monitoring and logging
 
 ### **Best Practices**
+
 - **Immutable infrastructure** deployment patterns
 - **Progressive delivery** with canary deployments
 - **Configuration management** with Kustomize
@@ -280,6 +308,7 @@ This architecture demonstrates:
 - **Policy as code** with Open Policy Agent integration
 
 ### **Operational Excellence**
+
 - **Automated deployments** with GitHub Actions
 - **Environment parity** across DTAP pipeline
 - **Rollback strategies** and disaster recovery
