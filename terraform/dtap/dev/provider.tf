@@ -29,29 +29,20 @@ provider "google-beta" {
   region  = var.region
 }
 
-# Kubernetes provider - use data source with fallbacks for better reliability
+# Kubernetes provider - use kubectl config-based authentication
+# This relies on kubectl being properly configured by the cluster module
 provider "kubernetes" {
-  host                   = try("https://${data.google_container_cluster.cluster.endpoint}", null)
-  cluster_ca_certificate = try(base64decode(data.google_container_cluster.cluster.master_auth.0.cluster_ca_certificate), null)
-  token                  = data.google_client_config.default.access_token
-
-  exec {
-    api_version = "client.authentication.k8s.io/v1beta1"
-    command     = "gke-gcloud-auth-plugin"
-  }
+  # Don't specify host/token - let it use kubectl config
+  # The kubernetes_cluster module configures kubectl via null_resource
+  config_path = "~/.kube/config"
 }
 
-# Helm provider - use data source with fallbacks for better reliability
+# Helm provider - use kubectl config-based authentication
 provider "helm" {
   kubernetes {
-    host                   = try("https://${data.google_container_cluster.cluster.endpoint}", null)
-    cluster_ca_certificate = try(base64decode(data.google_container_cluster.cluster.master_auth.0.cluster_ca_certificate), null)
-    token                  = data.google_client_config.default.access_token
-
-    exec {
-      api_version = "client.authentication.k8s.io/v1beta1"
-      command     = "gke-gcloud-auth-plugin"
-    }
+    # Don't specify host/token - let it use kubectl config
+    # The kubernetes_cluster module configures kubectl via null_resource
+    config_path = "~/.kube/config"
   }
 }
 
