@@ -29,17 +29,27 @@ provider "google-beta" {
   region  = var.region
 }
 
+# Kubernetes provider - use gke auth plugin
 provider "kubernetes" {
   host                   = "https://${module.dev_kubernetes_cluster.cluster_endpoint}"
   cluster_ca_certificate = base64decode(module.dev_kubernetes_cluster.cluster_ca_certificate)
-  token                  = data.google_client_config.default.access_token
+  
+  exec {
+    api_version = "client.authentication.k8s.io/v1beta1"
+    command     = "gke-gcloud-auth-plugin"
+  }
 }
 
+# Helm provider - use gke auth plugin
 provider "helm" {
   kubernetes {
     host                   = "https://${module.dev_kubernetes_cluster.cluster_endpoint}"
     cluster_ca_certificate = base64decode(module.dev_kubernetes_cluster.cluster_ca_certificate)
-    token                  = data.google_client_config.default.access_token
+    
+    exec {
+      api_version = "client.authentication.k8s.io/v1beta1"
+      command     = "gke-gcloud-auth-plugin"
+    }
   }
 }
 

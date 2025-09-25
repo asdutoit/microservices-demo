@@ -85,8 +85,17 @@ jobs:
 
       - name: Configure kubectl
         run: |
+          echo "🔧 Installing kubectl and auth plugin..."
           gcloud components install kubectl
           gcloud components install gke-gcloud-auth-plugin
+          
+          # Verify installations
+          kubectl version --client
+          gke-gcloud-auth-plugin --version
+          
+          # Set up PATH for auth plugin
+          echo "$(gcloud info --format='value(basic.python_location)')" >> $GITHUB_PATH
+          echo "✅ kubectl and gke-gcloud-auth-plugin ready"
 
       - name: Terraform Init
         run: terraform init
@@ -186,12 +195,10 @@ jobs:
           echo "🔄 Creating fresh plan to avoid stale state issues..."
           terraform plan -out=tfplan-fresh \
             -var="gcp_project_id=${{ env.PROJECT_ID }}" \
-            -var="namespace=development" \
-            -var="ci_cd_mode=true"
+            -var="namespace=development"
         env:
           TF_VAR_gcp_project_id: ${{ env.PROJECT_ID }}
           TF_VAR_namespace: development
-          TF_VAR_ci_cd_mode: true
 
       - name: Terraform Apply
         run: terraform apply -auto-approve tfplan-fresh

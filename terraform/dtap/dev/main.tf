@@ -52,13 +52,11 @@ module "dev_kubernetes_cluster" {
   region                     = var.region
   namespace                  = var.namespace
   filepath_manifest          = var.filepath_manifest
-  skip_app_deployment        = var.ci_cd_mode || var.skip_app_deployment
   memorystore                = var.memorystore
   enable_rbac_cluster_access = var.enable_rbac_cluster_access
 
   # Platform RBAC integration - managed by platform-rbac module
-  # Disable RBAC in CI/CD mode to simplify deployments
-  enable_platform_rbac  = var.ci_cd_mode ? false : var.enable_platform_rbac
+  enable_platform_rbac  = var.enable_platform_rbac
   platform_admins       = var.platform_admins
   platform_operators    = var.platform_operators
   platform_viewers      = var.platform_viewers
